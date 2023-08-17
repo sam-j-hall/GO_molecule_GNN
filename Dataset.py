@@ -1,5 +1,6 @@
 import json
 import random
+import torch
 import numpy as np
 import networkx as nx
 from rdkit import Chem
@@ -62,7 +63,7 @@ class XASDataset(InMemoryDataset):
         return encoding
 
     
-    def mol_to_nx(self,mol,spec,atom_id):
+    def mol_to_nx(self,mol,spec):
         # Create graph object
         G = nx.Graph()
         # For each atom in molecule
@@ -77,11 +78,9 @@ class XASDataset(InMemoryDataset):
                        bond.GetEndAtomIdx(),
                        edge_attrs = self.bond_features(bond))
         
-        # Turn spectra into array
-        spectrum = np.array(spec)
         # Normalize spectra to 1.0
-        max_intensity = np.max(spectrum)
-        norm_spec = 1.0 * (spectrum / max_intensity)
+        max_intensity = np.max(spec)
+        norm_spec = 1.0 * (spec / max_intensity)
         # Set spectra to graph
         G.graph['y'] = norm_spec
         
@@ -107,6 +106,7 @@ class XASDataset(InMemoryDataset):
                 [1 if atom.GetIsAromatic() else 0] 
             if functional_groups is not None:
                 features += functional_groups
+                
         return features
 
     
@@ -155,6 +155,7 @@ class XASDataset(InMemoryDataset):
         # Create a list of all the molecule names from the data
         tot_ids = list(dictionaries[0].keys())
         atom_count = []
+        print('Total number of molecules', len(tot_ids)) 
         
         # For each molecule in the dataset
         for mol_id in tot_ids :
@@ -162,11 +163,10 @@ class XASDataset(InMemoryDataset):
             # Find the total number of atoms of a given atomic number
             tot_atoms = self.count_atoms(mol,6)
             atom_count.append(tot_atoms)
-        print(atom_count)
+        print('Number of atoms in each molecule ', atom_count)
         
         # Find the total number of atoms across the whole dataset
         sum_atoms = sum(atom_count)
-        print(sum_atoms)
         
         idx = 0
         data_list = []
@@ -177,23 +177,26 @@ class XASDataset(InMemoryDataset):
             test_mol = Chem.MolFromSmiles(dictionaries[0][tot_ids[i]])
             # Get all spectra data from dictionary
             test_spec = dictionaries[1][tot_ids[i]]
-
+            
+            tot_spec = np.zeros(len(test_spec[str(1)]))
+                                         
             # For every atom in each molecule
             for j in range(int(atom_count[i])):
-                # Get the individual atom spectra
-                spec_dict = test_spec[str(j)]
-                # Create a graph 
-                gx = self.mol_to_nx(test_mol,spec_dict,j)
-                # Convert graph to pytorch geometric graph
-                pyg_graph = from_networkx(gx)
+                # Sum up all atom spectra
+                tot_spec += test_spec[str(j)]
+            
+            # Create a graph 
+            gx = self.mol_to_nx(test_mol,tot_spec)
+            # Convert graph to pytorch geometric graph
+            pyg_graph = from_networkx(gx)
                 
-                pyg_graph.idx = idx
-                pyg_graph.smiles = Chem.MolToSmiles(test_mol)
-                neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
-                pyg_graph.atom_num = j
-                pyg_graph.neighbors = neighbors
-                data_list.append(pyg_graph)
-                idx += 1
+            pyg_graph.idx = idx
+            pyg_graph.smiles = Chem.MolToSmiles(test_mol)
+            neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
+            pyg_graph.atom_num = j
+            pyg_graph.neighbors = neighbors
+            data_list.append(pyg_graph)
+            idx += 1
         
         random.shuffle(data_list)
 
