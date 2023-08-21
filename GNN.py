@@ -51,7 +51,7 @@ class GNN(torch.nn.Module):
         if graph_pooling == "set2set":
             self.graph_pred_linear = torch.nn.Linear(2*self.out_channels[-1], self.num_tasks)
         else:
-            self.graph_pred_linear = torch.nn.Linear(2*self.out_channels[-1],self.num_tasks)
+            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1],self.num_tasks)
 	
         	
 
@@ -59,25 +59,25 @@ class GNN(torch.nn.Module):
     def forward(self, batched_data):
         
       #  print(batched_data)
-        h_node,h_select = self.gnn_node(batched_data)
+        h_node = self.gnn_node(batched_data)
         #print(h_node.shape)
         h_graph = self.pool(h_node, batched_data.batch)
         #print(h_graph.shape)
         
         # Compute the weighted sum of x_batch and x_sum
-        w1 = 1.0  # Adjust this value as needed
+     #   w1 = 1.0  # Adjust this value as needed
         #h_out = w1 * h_graph + (1 - w1) * h_select
         #
-        h_weight = w1 * (h_graph-h_select) 
-        if h_select.dim() == 1:
-            h_select = h_select.unsqueeze(0)
-        h_out = torch.cat((h_select, h_weight), dim=1)
+     #   h_weight = w1 * (h_graph-h_select) 
+     #   if h_select.dim() == 1:
+      #      h_select = h_select.unsqueeze(0)
+      #  h_out = torch.cat((h_select, h_weight), dim=1)
 
         #print(h_out.shape)
         #out = F.relu(self.lin1(out))
         #out=F.relu(self.graph_pred_linear(h_out))
         p=torch.nn.LeakyReLU(0.1)
-        out=p(self.graph_pred_linear(h_out))
+        out=p(self.graph_pred_linear(h_graph))
         #print(out.shape)
         
         return  out
@@ -165,7 +165,7 @@ class GNN_node(torch.nn.Module):
 
     def forward(self, batched_data):
         x, edge_index, edge_attr, batch = batched_data.x.float(), batched_data.edge_index, batched_data.edge_attr, batched_data.batch
-        batch_index=(batched_data.index).unsqueeze(1)
+      #  batch_index=(batched_data.index).unsqueeze(1)
         edge_weight=None
 
         ### computing input node embedding
@@ -196,8 +196,8 @@ class GNN_node(torch.nn.Module):
         #considering the last layer representation        
         node_representation = h_list[-1]
         
-        node_select=node_representation[batch_index.squeeze()]
+       # node_select=node_representation[batch_index.squeeze()]
 
-        return node_representation,node_select
+        return node_representation
 
     
