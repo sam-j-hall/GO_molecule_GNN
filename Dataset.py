@@ -192,13 +192,13 @@ class XASDataset(InMemoryDataset):
                 
             pyg_graph.idx = idx
             pyg_graph.smiles = Chem.MolToSmiles(test_mol)
-            neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
-            pyg_graph.atom_num = j
-            pyg_graph.neighbors = neighbors
+            #neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
+            #pyg_graph.atom_num = j
+            #pyg_graph.neighbors = neighbors
             data_list.append(pyg_graph)
             idx += 1
         
-        random.shuffle(data_list)
+        random.Random(258).shuffle(data_list)
 
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
