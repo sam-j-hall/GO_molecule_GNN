@@ -8,7 +8,6 @@ from torch_geometric.data import InMemoryDataset
 from torch_geometric.utils.convert import from_networkx
 from typing import List, Union
 
-
 #from rdkit.Chem.rdmolfiles import  MolFromXYZFile
 #from rdkit.Chem import rdDetermineBonds
 
@@ -28,9 +27,10 @@ class XASDataset(InMemoryDataset):
                 ],
             }
     # Total number of atom features
-    ATOM_FDIM = sum(len(choices)  for choices in ATOM_FEATURES.values()) + 1
+    ATOM_FDIM = sum(len(choices) for choices in ATOM_FEATURES.values()) + 1
     # Number of bond features?
     BOND_FDIM = 14
+
 
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
         super().__init__(root, transform, pre_transform, pre_filter)
@@ -42,7 +42,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data.pt']
+        return ['data_test.pt']
     
     def onek_encoding_unk(self,value: int, choices: List[int]) -> List[int]:
         """
@@ -63,7 +63,7 @@ class XASDataset(InMemoryDataset):
         return encoding
 
     
-    def mol_to_nx(self,mol,spec):
+    def mol_to_nx_atom(self,mol,spec,atom_id):
         # Create graph object
         G = nx.Graph()
         # For each atom in molecule
@@ -83,6 +83,35 @@ class XASDataset(InMemoryDataset):
         norm_spec = 1.0 * (spec / max_intensity)
         # Set spectra to graph
         G.graph['y'] = norm_spec
+        
+        #G.graph['atom_index'] = atom_id
+        #G.graph['smiles'] = str(Chem.MolToSmiles(mol))
+        
+        return G
+    
+    def mol_to_nx_mol(self,mol,spec):
+        # Create graph object
+        G = nx.Graph()
+        # For each atom in molecule
+        for atom in mol.GetAtoms():
+            # Add a node to graph and create one-hot encoding vector for atom features
+            G.add_node(atom.GetIdx(),
+                      x = self.atom_features(atom))
+        # For each bond in molecule
+        for bond in mol.GetBonds():
+            # Add edge to graph and create one-hot encoding vector of bond features
+            G.add_edge(bond.GetBeginAtomIdx(),
+                       bond.GetEndAtomIdx(),
+                       edge_attrs = self.bond_features(bond))
+        
+        # Normalize spectra to 1.0
+        max_intensity = np.max(spec)
+        norm_spec = 1.0 * (spec / max_intensity)
+        # Set spectra to graph
+        G.graph['y'] = norm_spec
+        
+        #G.graph['atom_index'] = atom_id
+        #G.graph['smiles'] = str(Chem.MolToSmiles(mol))
         
         return G
 
@@ -144,6 +173,9 @@ class XASDataset(InMemoryDataset):
 
     
     def process(self):
+        # To load data into either for a full molecule or 
+        # individual atom ML model
+        atom_ml = True
         # Read data into huge `Data` list.
         data_list = [...]
         
@@ -178,25 +210,35 @@ class XASDataset(InMemoryDataset):
             # Get all spectra data from dictionary
             test_spec = dictionaries[1][tot_ids[i]]
             
-            tot_spec = np.zeros(len(test_spec[str(1)]))
-                                         
-            # For every atom in each molecule
-            for j in range(int(atom_count[i])):
-                # Sum up all atom spectra
-                tot_spec += test_spec[str(j)]
-            
-            # Create a graph 
-            gx = self.mol_to_nx(test_mol,tot_spec)
-            # Convert graph to pytorch geometric graph
-            pyg_graph = from_networkx(gx)
-                
-            pyg_graph.idx = idx
-            pyg_graph.smiles = Chem.MolToSmiles(test_mol)
-            #neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
-            #pyg_graph.atom_num = j
-            #pyg_graph.neighbors = neighbors
-            data_list.append(pyg_graph)
-            idx += 1
+            # For a whole molecule ML model
+            if not atom_ml:
+                # Create empty array for summed spectra
+                tot_spec = np.zeros(len(test_spec[str(1)]))
+                for j in range(int(atom_count[i])):
+                    # Sum up all atom spectra
+                    tot_spec += test_spec[str(j)]
+                # Create a graph 
+                gx = self.mol_to_nx_mol(test_mol,tot_spec)
+                # Convert graph to pytorch geometric graph
+                pyg_graph = from_networkx(gx)
+                pyg_graph.idx = idx
+                pyg_graph.smiles = Chem.MolToSmiles(test_mol)
+                data_list.append(pyg_graph)
+                idx += 1
+            else: # For individual atom ML model
+                # For every atom in each molecule
+                for j in range(int(atom_count[i])):
+                    # For individual atom ML model  
+                    spec_dict = test_spec[str(j)]
+                    gx = self.mol_to_nx_atom(test_mol, spec_dict, j)
+                    pyg_graph = from_networkx(gx)
+                    pyg_graph.idx = idx
+                    pyg_graph.smiles = Chem.MolToSmiles(test_mol)
+                    neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
+                    pyg_graph.atom_num = j
+                    pyg_graph.neigbors = neighbors
+                    data_list.append(pyg_graph)
+                    idx += 1
         
         random.Random(258).shuffle(data_list)
 
