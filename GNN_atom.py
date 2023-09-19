@@ -1,13 +1,13 @@
 import torch
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
-from torch_geometric.nn import GCNConv,GINConv,GATv2Conv,MLP,GINEConv,AttentionalAggregation
+from torch_geometric.nn import GCNConv, GINConv, GATv2Conv, MLP, GINEConv, AttentionalAggregation
 import torch.nn.functional as F
 
 class GNN(torch.nn.Module):
 
-    def __init__(self, num_tasks, num_layer = 4, emb_dim = 100, in_channels=[33,100,100,100],out_channels=[100,100,100,100],
-                    gnn_type= 'gin', heads=None,drop_ratio = 0.5, graph_pooling = "sum"):
+    def __init__(self, num_tasks, num_layer=4, emb_dim=100, in_channels=[33,100,100,100], out_channels=[100,100,100,100],
+                 gnn_type='gin', heads=None, drop_ratio=0.5, graph_pooling="sum"):
         '''
             num_tasks (int): number of labels to be predicted
             virtual_node (bool): whether to add virtual node or not
@@ -20,21 +20,19 @@ class GNN(torch.nn.Module):
         self.emb_dim = emb_dim
         self.num_tasks = num_tasks
         self.graph_pooling = graph_pooling
-        self.in_channels=in_channels
-        self.out_channels=out_channels
-        self.heads=heads
-        
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.heads = heads
         self._initialize_weights()
 
-
+        ## Sanity check number of layers
         if self.num_layer < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-       
+        ## Define message passing function
         self.gnn_node = GNN_node(num_layer, emb_dim ,in_channels,out_channels,drop_ratio = drop_ratio, gnn_type = gnn_type,heads=heads)
         
-
-        ### Pooling function to generate whole-graph embeddings
+        ## Pooling function to generate whole-graph embeddings
         if self.graph_pooling == "sum":
             self.pool = global_add_pool
         elif self.graph_pooling == "mean":
@@ -43,12 +41,13 @@ class GNN(torch.nn.Module):
             self.pool = global_max_pool
         elif self.graph_pooling == "attention":
             #self.pool = GlobalAttention(gate_nn = torch.nn.Sequential(torch.nn.Linear(self.out_channels[-1], 2*self.out_channels[-1]), torch.nn.BatchNorm1d(2*self.out_channels[-1]), torch.nn.ReLU(), torch.nn.Linear(2*self.out_channels[-1], self.out_channels[-1])))
-            self.pool=AttentionalAggregation(torch.nn.Linear(self.out_channels[-1], 1))
+            self.pool = AttentionalAggregation(torch.nn.Linear(self.out_channels[-1], 1))
         elif self.graph_pooling == "set2set":
             self.pool = Set2Set(emb_dim, processing_steps = 2)
         else:
             raise ValueError("Invalid graph pooling type.")
 
+        ## Define final ML layer
         if graph_pooling == "set2set":
             self.graph_pred_linear = torch.nn.Linear(2*self.out_channels[-1], self.num_tasks)
         else:
@@ -60,43 +59,33 @@ class GNN(torch.nn.Module):
 #             torch.nn.ReLU(),
 #             torch.nn.Linear(self.out_channels[-1], self.num_tasks))
             
-            self.graph_pred_linear = torch.nn.Linear(2*self.out_channels[-1],self.num_tasks)
+            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)
 	
-        	
-
 
     def forward(self, batched_data):
         
-      #  print(batched_data)
-        h_node,h_select = self.gnn_node(batched_data)
-       # print(h_node.shape,(batched_data.batch).shape)
+        h_node = self.gnn_node(batched_data)
+
         h_graph = self.pool(h_node, batched_data.batch)
-        
-      #  print(h_graph.shape)
-        
-        #print(h_select,h_node)
-        
+
         # Compute the weighted sum of x_batch and x_sum
-        w1 = 0.5 # Adjust this value as needed
-        h_weight = w1 * h_graph
-        #+ (1-w1) * h_select
-        #
-        #print("Printing pooled graph")
-        #print(h_graph)
-        #h_weight = w1 * (h_graph) 
-        if h_select.dim() == 1:
-            h_select = h_select.unsqueeze(0)
-        h_out = torch.cat((h_select, h_weight), dim=1)
+        #w1 = 0.5 # Adjust this value as needed
+        #h_weight = w1 * h_graph
+
+        #if h_select.dim() == 1:
+        #    h_select = h_select.unsqueeze(0)
+        #h_out = torch.cat((h_select, h_weight), dim=1)
         #h_out=h_select+h_weight
 
         #print(h_out.shape)
         #out = F.relu(self.lin1(out))
-        out= torch.sigmoid(self.graph_pred_linear(h_out))
-        #p=torch.nn.LeakyReLU(0.1)
-        #out=p(self.graph_pred_linear(h_out))
-        #print(out.shape)
-        
-        return  out,h_select,h_weight,h_out
+        #out = torch.sigmoid(self.graph_pred_linear(h_out))
+
+        p = torch.nn.LeakyReLU(0.1)
+   
+        out = p(self.graph_pred_linear(h_graph))
+
+        return  out #, h_select, h_weight, h_out
     
     def _initialize_weights(self):
         for m in self.modules():
@@ -113,7 +102,7 @@ class GNN_node(torch.nn.Module):
     Output:
         node representations
     """
-    def __init__(self, num_layer, emb_dim,in_channels,out_channels,drop_ratio = 0.5, gnn_type = 'gin',heads=None):
+    def __init__(self, num_layer, emb_dim, in_channels, out_channels, drop_ratio=0.5, gnn_type='gin', heads=None):
         '''
             emb_dim (int): node embedding dimensionality
             num_layer (int): number of GNN message passing layers
@@ -122,41 +111,17 @@ class GNN_node(torch.nn.Module):
         super(GNN_node, self).__init__()
         self.num_layer = num_layer
         self.drop_ratio = drop_ratio
-        self.in_channels=in_channels
-        self.out_channels=out_channels
-        self.num_layer=num_layer
-        self.heads=heads
-        ### add residual connection or not
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.num_layer = num_layer
+        self.heads = heads
 
 
         if self.num_layer < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
 
-        ###List of GNNs
-#         self.convs = torch.nn.ModuleList()
-#         self.batch_norms = torch.nn.ModuleList()
-
-#         for i, in_c, out_c in zip(range(num_layer), 
-#                                     in_channels, out_channels):
-#             if gnn_type == 'gin':
-#                 mlp = MLP([in_c, in_c, out_c])
-#                 self.convs.append(GINConv(nn=mlp, train_eps=False))
-                
-#             elif gnn_type == 'gcn':
-#                 #in_channels = hidden_channels
-#                 self.convs.append(GCNConv(in_c,out_c))
-             
-#             elif gnn_type =='gat':
-#                 if i==1:
-#                     self.convs.append(GATv2Conv(int(in_c), out_c, heads=int(heads)))    
-#                 else:
-#                     self.convs.append(GATv2Conv(int(in_c*heads), out_c, heads=int(heads))) 
-#             else:
-#                 ValueError('Undefined GNN type called {}'.format(gnn_type))
-                
-#            # self.batch_norms.append(torch.nn.BatchNorm1d(embed))
-
+        ## Set GNN layers based on type chosen
         self.convs = torch.nn.ModuleList()
         self.batch_norms = torch.nn.ModuleList()
 
@@ -167,9 +132,6 @@ class GNN_node(torch.nn.Module):
             elif gnn_type =='gine':
                 mlp = MLP([in_c, in_c, out_c])
                 self.convs.append(GINEConv(nn=mlp, train_eps=False,edge_dim=7))
-            
-                
-                
             elif gnn_type == 'gcn':
                 self.convs.append(GCNConv(in_c, out_c))
             elif gnn_type == 'gat':
@@ -191,15 +153,19 @@ class GNN_node(torch.nn.Module):
 #                 else :
                 self.batch_norms.append(torch.nn.BatchNorm1d(out_c))
 
+
     def forward(self, batched_data):
-        x, edge_index, edge_attr, batch = batched_data.x.float(), batched_data.edge_index, batched_data.edge_attrs, batched_data.batch
-        graph_indices=(batched_data.atom_num).unsqueeze(1)
-        edge_weight=None
+
+        x = batched_data.x.float()
+        edge_index = batched_data.edge_index
+        edge_attr = batched_data.edge_attrs
+        batch = batched_data.batch
+        graph_indices = (batched_data.atom_num).unsqueeze(1)
+        edge_weight = None
         
        # edge_attr=edge_attr(dtype=torch.float)
         
-       # print(type(edge_attr))
-        edge_attr = edge_attr.float()  
+        #edge_attr = edge_attr.float()  
         #batch = batch_data.batch
 
         # Calculate the graph sizes
@@ -209,24 +175,22 @@ class GNN_node(torch.nn.Module):
         #print(graph_sizes)
         
 
-        ### computing input node embedding
-        #print('here')
+        ## computing input node embedding
         h_list = [x]
-        #print(x.shape)
-        for layer in range(self.num_layer):
-            #print(layer)
 
-            h = self.convs[layer](h_list[layer], edge_index, edge_attr)
-            h=F.relu(h)
-            #print(layer,h.shape)
+        for layer in range(self.num_layer):
+
+            h = self.convs[layer](h_list[layer], edge_index)
+
+            h = F.relu(h)
+   
             h = self.batch_norms[layer](h)
-            #print(h.shape)
 
             if layer == self.num_layer - 1:
-                #remove relu for the last layer
-                h = F.dropout(h, self.drop_ratio, training = self.training)
+                # remove relu for the last layer
+                h = F.dropout(h, self.drop_ratio, training=self.training)
             else:
-                h = F.dropout(F.relu(h), self.drop_ratio, training = self.training)
+                h = F.dropout(F.relu(h), self.drop_ratio, training=self.training)
 
             h_list.append(h)
         
@@ -235,24 +199,24 @@ class GNN_node(torch.nn.Module):
                 
         #considering the last layer representation        
         node_representation = h_list[-1]
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        zero_tensor=torch.tensor([0],device=device)
+        #zero_tensor = torch.tensor([0],device=device)
         
         #cum_graph_indices = torch.cat((zero_tensor, torch.cumsum(batch_index.flatten(), dim=0)))
         
-        graph_sizes_list = graph_sizes.cpu().tolist()
-        graph_indices_list=graph_indices.cpu().tolist()
+        #graph_sizes_list = graph_sizes.cpu().tolist()
+        #graph_indices_list = graph_indices.cpu().tolist()
         
         #print(graph_sizes_list,graph_indices_list)
         # Compute cumulative sum of graph sizes
-        cumulative_sizes = [sum(graph_sizes_list[:i]) for i in range(len(graph_sizes_list))]
+        #cumulative_sizes = [sum(graph_sizes_list[:i]) for i in range(len(graph_sizes_list))]
        # cumulative_sizes_list = cumulative_sizes.)
         
         #print(cumulative_sizes)
 
         # Compute modified indices in the batch
-        modified_indices = [graph_indices_list[i][0] + cumulative_sizes[i] for i in range(len(graph_indices_list))]
+        #modified_indices = [graph_indices_list[i][0] + cumulative_sizes[i] for i in range(len(graph_indices_list))]
        
         #print(modified_indices)
 
@@ -261,9 +225,7 @@ class GNN_node(torch.nn.Module):
        
         #        print(node_representation,batch_index)
         
-        node_select=node_representation[modified_indices]
+#        node_select = node_representation[modified_indices]
         #print(node_representation,node_select)
 
-        return node_representation,node_select
-
-    
+        return node_representation #, node_select
