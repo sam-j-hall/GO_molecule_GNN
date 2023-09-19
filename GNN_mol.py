@@ -50,7 +50,7 @@ class GNN(torch.nn.Module):
         if graph_pooling == "set2set":
             self.graph_pred_linear = torch.nn.Linear(2*self.out_channels[-1], self.num_tasks)
         else:
-            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1],self.num_tasks)        	
+            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)      	
 
 
     def forward(self, batched_data):
@@ -130,9 +130,9 @@ class GNN_node(torch.nn.Module):
         edge_attr = batched_data.edge_attr
         batch = batched_data.batch
    
-        edge_weight=None
+        edge_weight = None
 
-        ### computing input node embedding
+        ## computing input node embedding
         h_list = [x]
 
         for layer in range(self.num_layer):
@@ -142,7 +142,7 @@ class GNN_node(torch.nn.Module):
             h = self.batch_norms[layer](h)
 
             if layer == self.num_layer - 1:
-                #remove relu for the last layer
+                # remove relu for the last layer
                 h = F.dropout(h, self.drop_ratio, training = self.training)
             else:
                 h = F.dropout(F.relu(h), self.drop_ratio, training = self.training)
