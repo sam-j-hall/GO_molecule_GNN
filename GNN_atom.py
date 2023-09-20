@@ -60,6 +60,7 @@ class GNN(torch.nn.Module):
 #             torch.nn.Linear(self.out_channels[-1], self.num_tasks))
             
             self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)
+            self.graph_pred_linear1 = torch.nn.Linear(200, 200)
 	
 
     def forward(self, batched_data):
@@ -84,6 +85,8 @@ class GNN(torch.nn.Module):
         p = torch.nn.LeakyReLU(0.1)
    
         out = p(self.graph_pred_linear(h_graph))
+
+        out = p(self.graph_pred_linear1(out))
 
         return  out #, h_select, h_weight, h_out
     

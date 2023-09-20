@@ -13,7 +13,7 @@ class XASDataset(InMemoryDataset):
     
     # class variables
     ATOM_FEATURES = {
-            'atomic_num': [1,6,8],
+            'atomic_num': [1, 6, 8],
             'degree': [0, 1, 2, 3, 4],
             'num_Hs': [0, 1, 2, 3],
             'hybridization': [
@@ -43,7 +43,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_atom.pt']
+        return ['data_atom_3.pt']
     
 
     def onek_encoding_unk(self,value: int, choices: List[int]) -> List[int]:
@@ -228,6 +228,7 @@ class XASDataset(InMemoryDataset):
                     
             
                     msg = self.message_pass(pyg_graph.x, pyg_graph.edge_index)
+                    msg = self.message_pass(msg, pyg_graph.edge_index)
                     msg = self.message_pass(msg, pyg_graph.edge_index)
                     pyg_graph.vector = msg[j]
             
