@@ -43,7 +43,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_atom_3.pt']
+        return ['data_atom.pt']
     
 
     def onek_encoding_unk(self,value: int, choices: List[int]) -> List[int]:
