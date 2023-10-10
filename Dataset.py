@@ -14,8 +14,8 @@ class XASDataset(InMemoryDataset):
     # class variables
     ATOM_FEATURES = {
             'atomic_num': [1, 6, 8],
-            'degree': [0, 1, 2, 3, 4],
-            'num_Hs': [0, 1, 2, 3],
+            #'degree': [0, 1, 2, 3, 4],
+            'num_Hs': [0, 1, 2],
             'hybridization': [
                 Chem.rdchem.HybridizationType.SP,
                 Chem.rdchem.HybridizationType.SP2,
@@ -27,7 +27,7 @@ class XASDataset(InMemoryDataset):
     # Number of bond features?
     BOND_FDIM = 14
 
-    atom_ml = True
+    atom_ml = False
 
 
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None, atom_ml=False):
@@ -43,7 +43,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_atom.pt']
+        return ['data_mol.pt']
     
 
     def onek_encoding_unk(self,value: int, choices: List[int]) -> List[int]:
@@ -102,7 +102,6 @@ class XASDataset(InMemoryDataset):
         else:
             # Get the values of all the atom features and add all up to the feature vector
             features = self.onek_encoding_unk(atom.GetAtomicNum(), self.ATOM_FEATURES['atomic_num']) + \
-                self.onek_encoding_unk(atom.GetTotalDegree(), self.ATOM_FEATURES['degree']) + \
                 self.onek_encoding_unk(int(atom.GetTotalNumHs()), self.ATOM_FEATURES['num_Hs']) + \
                 self.onek_encoding_unk(int(atom.GetHybridization()), self.ATOM_FEATURES['hybridization']) + \
                 [1 if atom.GetIsAromatic() else 0] 
@@ -128,10 +127,9 @@ class XASDataset(InMemoryDataset):
                 0,  # bond is not None
                 int(bt == Chem.rdchem.BondType.SINGLE),
                 int(bt == Chem.rdchem.BondType.DOUBLE),
-                int(bt == Chem.rdchem.BondType.TRIPLE),
                 int(bt == Chem.rdchem.BondType.AROMATIC),
-                int(bond.GetIsConjugated() if bt is not None else 0),
-                int(bond.IsInRing() if bt is not None else 0)
+                #int(bond.GetIsConjugated() if bt is not None else 0),
+                #int(bond.IsInRing() if bt is not None else 0)
             ]
         return fbond
 
