@@ -105,8 +105,8 @@ class XASDataset(InMemoryDataset):
                 self.onek_encoding_unk(int(atom.GetTotalNumHs()), self.ATOM_FEATURES['num_Hs']) + \
                 self.onek_encoding_unk(int(atom.GetHybridization()), self.ATOM_FEATURES['hybridization']) + \
                 [1 if atom.GetIsAromatic() else 0] 
-            if functional_groups is not None:
-                features += functional_groups
+            #if functional_groups is not None:
+            #    features += functional_groups
                 
         return features
 
