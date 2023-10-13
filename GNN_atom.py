@@ -3,6 +3,7 @@ from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
 from torch_geometric.nn import GCNConv, GINConv, GATv2Conv, MLP, GINEConv, AttentionalAggregation
 import torch.nn.functional as F
+from icecream import ic
 
 class GNN(torch.nn.Module):
 
@@ -67,7 +68,10 @@ class GNN(torch.nn.Module):
         
         h_node = self.gnn_node(batched_data)
 
-        h_graph = self.pool(h_node, batched_data.batch)
+        #h_graph = self.pool(h_node, batched_data.batch)
+
+        x = batched_data.x
+        ic(x)
 
         # Compute the weighted sum of x_batch and x_sum
         #w1 = 0.5 # Adjust this value as needed
