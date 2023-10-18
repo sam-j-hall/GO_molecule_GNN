@@ -68,11 +68,15 @@ class GNN(torch.nn.Module):
         
         h_node = self.gnn_node(batched_data)
 
-        #h_graph = self.pool(h_node, batched_data.batch)
+        ic(h_node.shape)
+        ic(h_node)
 
-        x = batched_data.x
-        ic(x)
+        h_graph = self.pool(h_node, batched_data.batch)
 
+        ic(h_graph.shape)
+        ic(h_graph)
+
+        exit()
         # Compute the weighted sum of x_batch and x_sum
         #w1 = 0.5 # Adjust this value as needed
         #h_weight = w1 * h_graph
@@ -201,7 +205,8 @@ class GNN_node(torch.nn.Module):
 
             h_list.append(h)
         
-    
+        #ic(h_list[0].shape)
+
             # for layer in range(self.num_layer):            #     node_representation += h_list[layer]
                 
         #considering the last layer representation        
