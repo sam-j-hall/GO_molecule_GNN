@@ -70,12 +70,12 @@ class GNN(torch.nn.Module):
 
         #ic(batched_data.batch.shape)
         #ic(batched_data.atom_num)
-        #atom = batched_data.atom_num
+        atom = batched_data.atom_num
         #ic(h_node[atom])
         #ic(h_node)
 
-        #h_graph = h_node[atom]
-        h_graph = self.pool(h_node, batched_data.batch)
+        h_graph = h_node[atom]
+        #h_graph = self.pool(h_node, batched_data.batch)
 
         #ic(h_graph.shape)
         #ic(h_graph)

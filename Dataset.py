@@ -46,7 +46,7 @@ class XASDataset(InMemoryDataset):
         return ['data_atom.pt']
 
 
-    def onek_encoding_unk(self,value: int, choices: List[int]) -> List[int]:
+    def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
         """
         Creates a one-hot encoding with an extra category for uncommon values.
 
@@ -89,7 +89,7 @@ class XASDataset(InMemoryDataset):
         return G
 
     
-    def atom_features(self,atom: Chem.rdchem.Atom, functional_groups: List[int] = None) -> List[Union[bool, int, float]]:
+    def atom_features(self, atom:Chem.rdchem.Atom, functional_groups:List[int] = None) -> List[Union[bool, int, float]]:
         """
         Builds a feature vector for an atom.
 
@@ -111,7 +111,7 @@ class XASDataset(InMemoryDataset):
         return features
 
     
-    def bond_features(self,bond: Chem.rdchem.Bond) -> List[Union[bool, int, float]]:
+    def bond_features(self, bond:Chem.rdchem.Bond) -> List[Union[bool, int, float]]:
         """
         Builds a feature vector for a bond.
 
@@ -134,7 +134,7 @@ class XASDataset(InMemoryDataset):
         return fbond
 
     
-    def count_atoms(self,mol,atomic_num):
+    def count_atoms(self, mol, atomic_num):
         # Works for all atoms, input atomic_num
         num_atoms = 0
         for atom in mol.GetAtoms():
@@ -179,10 +179,10 @@ class XASDataset(InMemoryDataset):
         print('Total number of molecules', len(tot_ids)) 
         
         # For each molecule in the dataset
-        for mol_id in tot_ids :
+        for mol_id in tot_ids:
             mol = Chem.MolFromSmiles(dictionaries[0][mol_id])
             # Find the total number of atoms of a given atomic number
-            tot_atoms = self.count_atoms(mol,6)
+            tot_atoms = self.count_atoms(mol, 6)
             atom_count.append(tot_atoms)
         print('Number of atoms in each molecule ', atom_count)
         
@@ -230,13 +230,13 @@ class XASDataset(InMemoryDataset):
                     msg = self.message_pass(msg, pyg_graph.edge_index)
                     pyg_graph.vector = msg[j]
             
-                    pyg_graph.idx = idx
+                    #pyg_graph.idx = idx
                     pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                     neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
                     pyg_graph.atom_num = j
-                    pyg_graph.neigbors = neighbors
+                    pyg_graph.neighbors = neighbors
                     data_list.append(pyg_graph)
-                    idx += 1
+                    #idx += 1
         
         random.Random(258).shuffle(data_list)
 
