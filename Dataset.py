@@ -38,12 +38,12 @@ class XASDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['data_coronene_4sets_0.6.json']
+        return ['data_coronene_4sets_0.6_new.json']
 
 
     @property
     def processed_file_names(self):
-        return ['data_atom.pt']
+        return ['data_atom_new.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
@@ -136,10 +136,10 @@ class XASDataset(InMemoryDataset):
     
     def count_atoms(self, mol, atomic_num):
         # Works for all atoms, input atomic_num
-        num_atoms = 0
+        num_atoms = []
         for atom in mol.GetAtoms():
             if atom.GetAtomicNum() == atomic_num:  # Atomic number 8 corresponds to oxygen
-                num_atoms += 1
+                num_atoms.append(atom.GetIdx())
         return num_atoms
     
 
@@ -176,6 +176,7 @@ class XASDataset(InMemoryDataset):
         # Create a list of all the molecule names from the data
         tot_ids = list(dictionaries[0].keys())
         atom_count = []
+        atom_num = []
         print('Total number of molecules', len(tot_ids)) 
         
         # For each molecule in the dataset
@@ -184,7 +185,8 @@ class XASDataset(InMemoryDataset):
             # Find the total number of atoms of a given atomic number
             tot_atoms = self.count_atoms(mol, 6)
             atom_count.append(tot_atoms)
-        print('Number of atoms in each molecule ', atom_count)
+            atom_num.append(len(tot_atoms))
+        print('Number of atoms in each molecule ', atom_num)
         
         idx = 0
         data_list = []
@@ -199,10 +201,10 @@ class XASDataset(InMemoryDataset):
             # For a whole molecule ML model
             if not self.atom_ml:
                 # Create empty array for summed spectra
-                tot_spec = np.zeros(len(test_spec[str(1)]))
+                tot_spec = np.zeros(len(test_spec[str(0)]))
                 
                 # For each atom in the molecule
-                for j in range(int(atom_count[i])):
+                for j in atom_count[i]:
                     # Sum up all atom spectra
                     tot_spec += test_spec[str(j)]
                     
@@ -210,16 +212,16 @@ class XASDataset(InMemoryDataset):
                 gx = self.mol_to_nx(test_mol, tot_spec)
                 # Convert graph to pytorch geometric graph
                 pyg_graph = from_networkx(gx)
-                pyg_graph.idx = idx
+                #pyg_graph.idx = idx
                 pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                 data_list.append(pyg_graph)
-                idx += 1
+                #idx += 1
                 
             else: # For individual atom ML model
                 
                 # For every atom in each molecule
-                for j in range(int(atom_count[i])):
-                    # For individual atom ML model  
+                for j in atom_count[i]:
+                    # For individual atom ML model
                     spec_dict = test_spec[str(j)]
                     gx = self.mol_to_nx(test_mol, spec_dict)
                     pyg_graph = from_networkx(gx)
