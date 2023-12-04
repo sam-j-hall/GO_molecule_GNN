@@ -26,6 +26,7 @@ class GNN(torch.nn.Module):
         self.heads = heads
         self._initialize_weights()
 
+        ic('enter')
         ## Sanity check number of layers
         if self.num_layer < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
@@ -61,46 +62,46 @@ class GNN(torch.nn.Module):
 #             torch.nn.Linear(self.out_channels[-1], self.num_tasks))
             
             self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)
-            self.graph_pred_linear1 = torch.nn.Linear(200, 200)
+            #self.graph_pred_linear1 = torch.nn.Linear(200, 200)
 	
 
     def forward(self, batched_data):
-        
-        h_node = self.gnn_node(batched_data)
+        ic('here')
+        h_node, h_select = self.gnn_node(batched_data)
 
         #ic(batched_data.batch.shape)
         #ic(batched_data.atom_num)
-        atom = batched_data.atom_num
+     #   atom = batched_data.atom_num
         #ic(h_node[atom])
         #ic(h_node)
 
-        h_graph = h_node[atom]
-        #h_graph = self.pool(h_node, batched_data.batch)
+#        h_graph = h_node[atom]
+        h_graph = self.pool(h_node, batched_data.batch)
 
         #ic(h_graph.shape)
         #ic(h_graph)
 
 #        exit()
         # Compute the weighted sum of x_batch and x_sum
-        #w1 = 0.5 # Adjust this value as needed
-        #h_weight = w1 * h_graph
+        w1 = 0.5 # Adjust this value as needed
+        h_weight = w1 * h_graph
 
-        #if h_select.dim() == 1:
-        #    h_select = h_select.unsqueeze(0)
-        #h_out = torch.cat((h_select, h_weight), dim=1)
+        if h_select.dim() == 1:
+            h_select = h_select.unsqueeze(0)
+        h_out = torch.cat((h_select, h_weight), dim=1)
         #h_out=h_select+h_weight
 
         #print(h_out.shape)
         #out = F.relu(self.lin1(out))
-        #out = torch.sigmoid(self.graph_pred_linear(h_out))
+        out = torch.sigmoid(self.graph_pred_linear(h_out))
 
-        p = torch.nn.LeakyReLU(0.1)
+#        p = torch.nn.LeakyReLU(0.1)
    
-        out = p(self.graph_pred_linear(h_graph))
+#        out = p(self.graph_pred_linear(h_graph))
 
-        out = p(self.graph_pred_linear1(out))
+#        out = p(self.graph_pred_linear1(out))
 
-        return  out #, h_select, h_weight, h_out
+        return  out, h_select, h_weight, h_out
     
     def _initialize_weights(self):
         for m in self.modules():
@@ -179,8 +180,12 @@ class GNN_node(torch.nn.Module):
         edge_weight = None
         
        # edge_attr=edge_attr(dtype=torch.float)
-        
-        #edge_attr = edge_attr.float()  
+        ic(type(edge_attr))
+        ic(type(x))
+        ic(type(edge_index))
+        ic(type(batch))
+
+        edge_attr = edge_attr.float()  
         #batch = batch_data.batch
 
         # Calculate the graph sizes
@@ -188,7 +193,6 @@ class GNN_node(torch.nn.Module):
 
         # Print the graph sizes
         #print(graph_sizes)
-        
 
         ## computing input node embedding
         h_list = [x]
@@ -215,24 +219,24 @@ class GNN_node(torch.nn.Module):
                 
         #considering the last layer representation        
         node_representation = h_list[-1]
-        #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        #zero_tensor = torch.tensor([0],device=device)
+        zero_tensor = torch.tensor([0],device=device)
         
         #cum_graph_indices = torch.cat((zero_tensor, torch.cumsum(batch_index.flatten(), dim=0)))
         
-        #graph_sizes_list = graph_sizes.cpu().tolist()
-        #graph_indices_list = graph_indices.cpu().tolist()
+        graph_sizes_list = graph_sizes.cpu().tolist()
+        graph_indices_list = graph_indices.cpu().tolist()
         
         #print(graph_sizes_list,graph_indices_list)
         # Compute cumulative sum of graph sizes
-        #cumulative_sizes = [sum(graph_sizes_list[:i]) for i in range(len(graph_sizes_list))]
+        cumulative_sizes = [sum(graph_sizes_list[:i]) for i in range(len(graph_sizes_list))]
        # cumulative_sizes_list = cumulative_sizes.)
         
         #print(cumulative_sizes)
 
         # Compute modified indices in the batch
-        #modified_indices = [graph_indices_list[i][0] + cumulative_sizes[i] for i in range(len(graph_indices_list))]
+        modified_indices = [graph_indices_list[i][0] + cumulative_sizes[i] for i in range(len(graph_indices_list))]
        
         #print(modified_indices)
 
@@ -241,7 +245,7 @@ class GNN_node(torch.nn.Module):
        
         #        print(node_representation,batch_index)
         
-#        node_select = node_representation[modified_indices]
+        node_select = node_representation[modified_indices]
         #print(node_representation,node_select)
 
-        return node_representation #, node_select
+        return node_representation, node_select
