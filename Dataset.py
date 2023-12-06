@@ -78,7 +78,7 @@ class XASDataset(InMemoryDataset):
         for bond in mol.GetBonds():
             # Add edge to graph and create one-hot encoding vector of bond features
             G.add_edge(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),
-                       edge_attrs=self.bond_features(bond))
+                       weight=self.bond_features(bond))
         
         # Normalize spectra to 1.0
         max_intensity = np.max(spec)
@@ -128,8 +128,8 @@ class XASDataset(InMemoryDataset):
                 int(bt == Chem.rdchem.BondType.SINGLE),
                 int(bt == Chem.rdchem.BondType.DOUBLE),
                 int(bt == Chem.rdchem.BondType.AROMATIC),
-                #int(bond.GetIsConjugated() if bt is not None else 0),
-                #int(bond.IsInRing() if bt is not None else 0)
+                int(bond.GetIsConjugated() if bt is not None else 0),
+                int(bond.IsInRing() if bt is not None else 0)
             ]
         return fbond
 

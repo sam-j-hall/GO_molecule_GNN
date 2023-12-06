@@ -26,7 +26,6 @@ class GNN(torch.nn.Module):
         self.heads = heads
         self._initialize_weights()
 
-        ic('enter')
         ## Sanity check number of layers
         if self.num_layer < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
@@ -66,7 +65,7 @@ class GNN(torch.nn.Module):
 	
 
     def forward(self, batched_data):
-        ic('here')
+
         h_node, h_select = self.gnn_node(batched_data)
 
         #ic(batched_data.batch.shape)
@@ -174,12 +173,12 @@ class GNN_node(torch.nn.Module):
 
         x = batched_data.x.float()
         edge_index = batched_data.edge_index
-        edge_attr = batched_data.edge_attrs
+        edge_attr = batched_data.weight
         batch = batched_data.batch
         graph_indices = (batched_data.atom_num).unsqueeze(1)
         edge_weight = None
         
-       # edge_attr=edge_attr(dtype=torch.float)
+        #edge_attr=edge_attr(dtype=torch.float)
         ic(type(edge_attr))
         ic(type(x))
         ic(type(edge_index))
