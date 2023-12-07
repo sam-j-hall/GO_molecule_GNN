@@ -87,11 +87,16 @@ class GNN(torch.nn.Module):
 
         if h_select.dim() == 1:
             h_select = h_select.unsqueeze(0)
-        h_out = torch.cat((h_select, h_weight), dim=1)
-        #h_out=h_select+h_weight
+       # ic(h_select.shape)
+        #ic(h_weight.shape)
+        #h_out = torch.cat((h_select, h_weight), dim=1)
+        h_out=h_select+h_weight
 
         #print(h_out.shape)
         #out = F.relu(self.lin1(out))
+
+#        ic(h_out.shape)
+
         out = torch.sigmoid(self.graph_pred_linear(h_out))
 
 #        p = torch.nn.LeakyReLU(0.1)
@@ -179,10 +184,10 @@ class GNN_node(torch.nn.Module):
         edge_weight = None
         
         #edge_attr=edge_attr(dtype=torch.float)
-        ic(type(edge_attr))
-        ic(type(x))
-        ic(type(edge_index))
-        ic(type(batch))
+#        ic(type(edge_attr))
+ #       ic(type(x))
+  #      ic(type(edge_index))
+   #     ic(type(batch))
 
         edge_attr = edge_attr.float()  
         #batch = batch_data.batch
