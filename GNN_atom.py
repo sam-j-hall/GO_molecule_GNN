@@ -82,7 +82,7 @@ class GNN(torch.nn.Module):
 
 #        exit()
         # Compute the weighted sum of x_batch and x_sum
-        w1 = 0.5 # Adjust this value as needed
+        w1 = 0.8 # Adjust this value as needed
         h_weight = w1 * h_graph
 
         if h_select.dim() == 1:
