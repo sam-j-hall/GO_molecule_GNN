@@ -86,6 +86,10 @@ def train_atom(epoch, loader, model, device, optimizer):
             select_list.append(select)
             smiles_list.append(batch.smiles)
             tot_list.append(tot)
+
+        out = pred[0].detach().numpy()
+        true = batch.y[0].detach().numpy()
+
     a = 0
     b = 0
     c = 0
@@ -98,4 +102,4 @@ def train_atom(epoch, loader, model, device, optimizer):
     
     #print(len(train_loader.dataset))
         #emb_list.append(emb)
-    return loss_all / len(loader.dataset), a ,b ,c ,d
+    return loss_all / len(loader.dataset), a ,b ,c ,d, out, true
