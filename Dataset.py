@@ -38,12 +38,12 @@ class XASDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['data_coronene_4sets_0.6_new.json']
+        return ['data_coronene_4sets_0.6_final.json']
 
 
     @property
     def processed_file_names(self):
-        return ['data_mol_new.pt']
+        return ['data_mol.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
