@@ -55,7 +55,7 @@ def bokeh_spectra(ml_spectra, true_spectra):
     p = figure(
     x_axis_label = 'Photon Energy (eV)', y_axis_label = 'arb. units',
     x_range = (280,300),
-    width = 400, height = 400,
+    width = 350, height = 350,
     outline_line_color = 'black', outline_line_width = 2
     )
 
