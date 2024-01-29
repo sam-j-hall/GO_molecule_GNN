@@ -13,9 +13,9 @@ class XASDataset(InMemoryDataset):
     
     # class variables
     ATOM_FEATURES = {
-            'atomic_num': [1, 6, 8],
+            'atomic_num': [1.0, 6.0, 8.0],
             #'degree': [0, 1, 2, 3, 4],
-            'num_Hs': [0, 1, 2],
+            'num_Hs': [0.0, 1.0, 2.0],
             'hybridization': [
                 Chem.rdchem.HybridizationType.SP,
                 Chem.rdchem.HybridizationType.SP2,
@@ -56,11 +56,11 @@ class XASDataset(InMemoryDataset):
                  If :code:`value` is not in :code:`choices`, then the final element in the encoding is 1.
         """
         # Create vector of zeros for the atom feature
-        encoding = [0] * (len(choices))
+        encoding = [0.0] * (len(choices))
         # Find index value of specific atom in vector
         index = choices.index(value)
         # Set to 1
-        encoding[index] = 1
+        encoding[index] = 1.0
 
         return encoding
 
@@ -78,13 +78,13 @@ class XASDataset(InMemoryDataset):
         for bond in mol.GetBonds():
             # Add edge to graph and create one-hot encoding vector of bond features
             G.add_edge(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(),
-                       weight=self.bond_features(bond))
+                       edge_attr=self.bond_features(bond))
         
         # Normalize spectra to 1.0
         max_intensity = np.max(spec)
         norm_spec = 1.0 * (spec / max_intensity)
         # Set spectra to graph
-        G.graph['y'] = norm_spec
+        G.graph['spectrum'] = norm_spec
         
         return G
 
@@ -212,10 +212,10 @@ class XASDataset(InMemoryDataset):
                 gx = self.mol_to_nx(test_mol, tot_spec)
                 # Convert graph to pytorch geometric graph
                 pyg_graph = from_networkx(gx)
-                #pyg_graph.idx = idx
+                pyg_graph.idx = idx
                 pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                 data_list.append(pyg_graph)
-                #idx += 1
+                idx += 1
                 
             else: # For individual atom ML model
                 
@@ -232,13 +232,13 @@ class XASDataset(InMemoryDataset):
                     msg = self.message_pass(msg, pyg_graph.edge_index)
                     pyg_graph.vector = msg[j]
             
-                    #pyg_graph.idx = idx
+                    pyg_graph.idx = idx
                     pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                     neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
                     pyg_graph.atom_num = j
                     pyg_graph.neighbors = neighbors
                     data_list.append(pyg_graph)
-                    #idx += 1
+                    idx += 1
         
         random.Random(258).shuffle(data_list)
 

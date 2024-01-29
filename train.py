@@ -14,10 +14,10 @@ def train_model(epoch, loader, model, device, optimizer):
 
         pred = model(batch)
 
-        batch_size = batch.y.shape[0] // 200
-        batch.y = batch.y.view(batch_size, 200)
+        batch_size = batch.spectrum.shape[0] // 200
+        batch.spectrum = batch.spectrum.view(batch_size, 200)
 
-        loss = nn.MSELoss()(pred.double(), batch.y.double())
+        loss = nn.MSELoss()(pred.double(), batch.spectrum.double())
 
         loss.backward()
 
@@ -87,8 +87,8 @@ def train_atom(epoch, loader, model, device, optimizer):
             smiles_list.append(batch.smiles)
             tot_list.append(tot)
 
-        out = pred[0].detach().numpy()
-        true = batch.y[0].detach().numpy()
+        out = pred[0].cpu().detach().numpy()
+        true = batch.y[0].cpu().detach().numpy()
 
     a = 0
     b = 0
