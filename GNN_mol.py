@@ -127,7 +127,7 @@ class GNN_node(torch.nn.Module):
 
         x = batched_data.x.float()
         edge_index = batched_data.edge_index
-        edge_attr = batched_data.edge_attr.float()
+        edge_attr = batched_data.edge_attr
         batch = batched_data.batch
    
         edge_weight = None
@@ -136,8 +136,7 @@ class GNN_node(torch.nn.Module):
         h_list = [x]
 
         for layer in range(self.num_layer):
-
-            h = self.convs[layer](h_list[layer], edge_index, edge_attr)
+            h = self.convs[layer](h_list[layer], edge_index)#, edge_attr)
 
             h = self.batch_norms[layer](h)
 
