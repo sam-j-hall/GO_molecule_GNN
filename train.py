@@ -50,8 +50,8 @@ def train_atom(epoch, loader, model, device, optimizer):
         
         pred, node, select, tot = model(batch)
         #pred = model(batch)
-        batch_size = batch.y.shape[0] // 200
-        batch.y = batch.y.view(batch_size, 200)
+        batch_size = batch.spectrum.shape[0] // 200
+        batch.spectrum = batch.spectrum.view(batch_size, 200)
         #pred = torch.clamp(pred, min=0.0)
         #print(batch.y.shape)
         #new_pred=pred.view(batch.y[:,0:99].shape)
@@ -63,7 +63,7 @@ def train_atom(epoch, loader, model, device, optimizer):
         #loss = nn.MSELoss()(pred.view(-1, 1).double(), 
         #                batch.y[:,:100].view(-1, 1).double()) 
         
-        loss = nn.MSELoss()(pred.double(), batch.y.double()) 
+        loss = nn.MSELoss()(pred.double(), batch.spectrum.double()) 
        # + alpha*F.mse_loss(torch.log(pred.view(-1, 1).double()+0.001), torch.log(batch.y.view(-1, 1).double()+0.001))
         
         #p_loss=nn.SmoothL1Loss()(new_pred.double(), 

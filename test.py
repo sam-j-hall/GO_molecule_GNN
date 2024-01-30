@@ -10,13 +10,13 @@ def test_model(loader, model, device):
 
         batch = batch.to(device)
 
-        batch_size = batch.y.shape[0] // 200
-        batch.y = batch.y.view(batch_size, 200)
+        batch_size = batch.spectrum.shape[0] // 200
+        batch.spectrum = batch.spectrum.view(batch_size, 200)
 
         with torch.no_grad():
             pred = model(batch)
 
-        loss = nn.MSELoss()(pred.double(), batch.y.double())
+        loss = nn.MSELoss()(pred.double(), batch.spectrum.double())
 
         loss_all += loss.item() * batch.num_graphs
 
@@ -32,8 +32,8 @@ def test_atom(loader, model, device):
         
         # Add batch dimension to index
         #batch_index = index.unsqueeze(1)
-        batch_size = batch.y.shape[0] // 200
-        batch.y = batch.y.view(batch_size, 200)
+        batch_size = batch.spectrum.shape[0] // 200
+        batch.spectrum = batch.spectrum.view(batch_size, 200)
 
         with torch.no_grad():
             #pred = model(batch)
@@ -44,7 +44,7 @@ def test_atom(loader, model, device):
        # loss = nn.MSELoss()(pred.view(-1, 1).double(),
         #                  batch.y.view(-1, 1).double()) 
         
-        loss = nn.MSELoss()(pred.double(), batch.y.double()) 
+        loss = nn.MSELoss()(pred.double(), batch.spectrum.double()) 
     #    +alpha*F.mse_loss(torch.log(pred.view(-1, 1).double()+0.001), torch.log(batch.y.view(-1, 1).double()+0.001))
        # loss=nn.SmoothL1Loss()(pred.view(-1, 1).double(), 
        #                 batch.y.view(-1, 1).double())
