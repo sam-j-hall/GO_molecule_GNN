@@ -27,7 +27,7 @@ class XASDataset(InMemoryDataset):
     # Number of bond features?
     BOND_FDIM = 14
 
-    atom_ml = False
+    atom_ml = True
 
 
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None, atom_ml=False):
@@ -43,7 +43,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_mol.pt']
+        return ['data_atom.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:

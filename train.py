@@ -88,7 +88,7 @@ def train_atom(epoch, loader, model, device, optimizer):
             tot_list.append(tot)
 
         out = pred[0].cpu().detach().numpy()
-        true = batch.y[0].cpu().detach().numpy()
+        true = batch.spectrum[0].cpu().detach().numpy()
 
     a = 0
     b = 0

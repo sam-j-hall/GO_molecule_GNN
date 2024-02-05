@@ -178,7 +178,7 @@ class GNN_node(torch.nn.Module):
 
         x = batched_data.x.float()
         edge_index = batched_data.edge_index
-        edge_attr = batched_data.weight
+        edge_attr = batched_data.edge_attr
         batch = batched_data.batch
         graph_indices = (batched_data.atom_num).unsqueeze(1)
         edge_weight = None
