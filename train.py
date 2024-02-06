@@ -1,4 +1,6 @@
 import torch.nn as nn
+import torch
+import numpy as np
 
 def train_model(epoch, loader, model, device, optimizer):
 
@@ -17,7 +19,8 @@ def train_model(epoch, loader, model, device, optimizer):
         batch_size = batch.spectrum.shape[0] // 200
         batch.spectrum = batch.spectrum.view(batch_size, 200)
 
-        loss = nn.MSELoss()(pred.double(), batch.spectrum.double())
+        #loss = nn.MSELoss(reduction='sum')(pred.double(), batch.spectrum.double()
+        loss = sid(pred.double(), batch.spectrum.double())
 
         loss.backward()
 
@@ -26,6 +29,25 @@ def train_model(epoch, loader, model, device, optimizer):
         optimizer.step()
 
     return loss_all / len(loader.dataset)
+
+def sid(prediction, true):    
+
+    sid = []
+
+    for i in range(len(prediction)):
+        temp = 0
+        for x in range(200):
+            pred = prediction[i][x].detach().numpy()
+            tgt = true[i][x].detach().numpy()
+            if pred < 0:
+                pred = 0.0000000001
+
+            temp += pred * np.log(pred/tgt) + tgt * np.log(tgt/pred)
+            sid.append(temp)
+    value = np.array(sum(sid) / len(sid))
+    value = torch.autograd.Variable(torch.from_numpy(value), requires_grad=True)
+
+    return value
 
 def train_atom(epoch, loader, model, device, optimizer):
     model.train()
