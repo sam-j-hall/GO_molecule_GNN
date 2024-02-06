@@ -3,7 +3,7 @@ import numpy as np
 from bokeh.plotting import figure
 from bokeh.palettes import HighContrast3
 
-def plot_spectra(predicted_spectrum, true_spectrum, save_var):
+def plot_spectra(true_spectrum, predicted_spectrum, save_var):
     """
     Plots the predicted spectrum and true spectrum on a graph.
     
