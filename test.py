@@ -17,8 +17,8 @@ def test_model(loader, model, device):
         with torch.no_grad():
             pred = model(batch)
 
-        #loss = nn.MSELoss(reduction='sum')(pred.double(), batch.spectrum.double())
-        loss = sid(pred.double(), batch.spectrum.double())
+        loss = nn.MSELoss()(pred.double(), batch.spectrum.double())
+        #loss = sid(pred.double(), batch.spectrum.double())
 
         loss_all += loss.item() * batch.num_graphs
 

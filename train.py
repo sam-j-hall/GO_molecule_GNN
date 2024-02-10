@@ -19,8 +19,8 @@ def train_model(epoch, loader, model, device, optimizer):
         batch_size = batch.spectrum.shape[0] // 200
         batch.spectrum = batch.spectrum.view(batch_size, 200)
 
-        #loss = nn.MSELoss(reduction='sum')(pred.double(), batch.spectrum.double()
-        loss = sid(pred.double(), batch.spectrum.double())
+        loss = nn.MSELoss()(pred.double(), batch.spectrum.double())
+        #loss = sid(pred.double(), batch.spectrum.double())
 
         loss.backward()
 
