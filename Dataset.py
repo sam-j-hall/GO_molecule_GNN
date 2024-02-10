@@ -14,7 +14,7 @@ class XASDataset(InMemoryDataset):
     # class variables
     ATOM_FEATURES = {
             'atomic_num': [1.0, 6.0, 8.0],
-            #'degree': [0, 1, 2, 3, 4],
+            'degree': [0, 1, 2, 3, 4],
             'num_Hs': [0.0, 1.0, 2.0],
             'hybridization': [
                 Chem.rdchem.HybridizationType.SP,
@@ -103,6 +103,7 @@ class XASDataset(InMemoryDataset):
         else:
             # Get the values of all the atom features and add all up to the feature vector
             features = self.onek_encoding_unk(atom.GetAtomicNum(), self.ATOM_FEATURES['atomic_num']) + \
+                self.onek_encoding_unk(int(atom.GetDegree()), self.ATOM_FEATURES['degree']) + \
                 self.onek_encoding_unk(int(atom.GetTotalNumHs()), self.ATOM_FEATURES['num_Hs']) + \
                 self.onek_encoding_unk(int(atom.GetHybridization()), self.ATOM_FEATURES['hybridization']) + \
                 [1 if atom.GetIsAromatic() else 0] 
