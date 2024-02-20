@@ -70,7 +70,7 @@ def train_atom(epoch, loader, model, device, optimizer):
 
         optimizer.zero_grad()
         
-        pred, node, select, tot = model(batch)
+        pred, node = model(batch)
         #pred = model(batch)
         batch_size = batch.spectrum.shape[0] // 200
         batch.spectrum = batch.spectrum.view(batch_size, 200)

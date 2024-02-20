@@ -61,43 +61,73 @@ class GNN(torch.nn.Module):
 #             torch.nn.Linear(self.out_channels[-1], self.num_tasks))
             
             self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)
-            self.graph_pred_linear1 = torch.nn.Linear(200, 200)
+            #self.graph_pred_linear1 = torch.nn.Linear(200, 200)
 	
 
     def forward(self, batched_data):
 
+        # --- Start with batched date from data loader
+        # ic(batched_data)
+
+        # --- Run batched data throught the convolution layers
         h_node, h_select = self.gnn_node(batched_data)
 
-        #ic(batched_data.batch.shape)
-        #ic(batched_data.atom_num)
-     #   atom = batched_data.atom_num
-        #ic(h_node[atom])
-        #ic(h_node)
+        # --- Output gives you a tensor of shape (number of atoms in batch, number of features on final layer in gnn_node)
+        # --- 
+        # ic(type(h_node))
+        # ic(h_node.shape)
+        # ic(h_node[0])
+        # ic(len(h_node[0]))
+        # ic(h_select)
+        # ic(len(h_select))
+
+        # --- batched_data lists all the x feature vectors of every molecule in the batch
+        # --- from the first atom x vector to the last, so length sum of number of atoms in batch
+        # --- The batched_data.batch gives a tensor which is used to label all atoms in th same molecule
+        # --- [0,0,0,0... for how many atoms there are, 1,1,1... and so on to, x,x,x... the number of molecules]
+        # ic(batched_data.batch)
+        # ic(batched_data.batch.shape)
+        # ic(batched_data.atom_num)
+        # atom = batched_data.atom_num
+        # ic(atom)
+        # ic(h_node[atom])
+        # ic(h_node)
 
 #        h_graph = h_node[atom]
+        # --- This pools together all atoms in the same molecule together
         h_graph = self.pool(h_node, batched_data.batch)
 
-        #ic(h_graph.shape)
-        #ic(h_graph)
+        # --- Output give you tensor of shape (number of items in batch, number of features in final layer in gnn_node)
+        # ic(h_graph.shape)
+        # ic(h_graph)
+        # ic(len(h_graph))
+
+        # ic(h_graph[0])
+        # ic(batched_data.atom_num[0])
+        # ic(h_node[batched_data.atom_num[0]])
+        # ic(h_select[0])
 
 #        exit()
         # Compute the weighted sum of x_batch and x_sum
-        w1 = 0.8 # Adjust this value as needed
+        w1 = 1.0 # Adjust this value as needed
         h_weight = w1 * h_graph
+        h_new = h_weight + h_select
 
-        if h_select.dim() == 1:
-            h_select = h_select.unsqueeze(0)
+
+        #if h_select.dim() == 1:
+         #   h_select = h_select.unsqueeze(0)
        # ic(h_select.shape)
         #ic(h_weight.shape)
         #h_out = torch.cat((h_select, h_weight), dim=1)
-        h_out=h_select+h_weight
+        #h_out=h_select+h_weight
 
         #print(h_out.shape)
         #out = F.relu(self.lin1(out))
 
 #        ic(h_out.shape)
 
-        out = torch.sigmoid(self.graph_pred_linear(h_out))
+        #out = torch.sigmoid(self.graph_pred_linear(h_select))
+        out = self.graph_pred_linear(h_new)
 
 #        p = torch.nn.LeakyReLU(0.1)
    
@@ -105,7 +135,7 @@ class GNN(torch.nn.Module):
 
 #        out = p(self.graph_pred_linear1(out))
 
-        return  out, h_select, h_weight, h_out
+        return  out, h_select#, h_weight, h_out
     
     def _initialize_weights(self):
         for m in self.modules():
@@ -203,7 +233,7 @@ class GNN_node(torch.nn.Module):
 
         for layer in range(self.num_layer):
 
-            h = self.convs[layer](h_list[layer], edge_index, edge_attr=edge_attr)
+            h = self.convs[layer](h_list[layer], edge_index)#, edge_attr=edge_attr)
    
             h = self.batch_norms[layer](h)
 
