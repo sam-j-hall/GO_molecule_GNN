@@ -204,8 +204,6 @@ class GNN_node(torch.nn.Module):
         for layer in range(self.num_layer):
 
             h = self.convs[layer](h_list[layer], edge_index, edge_attr=edge_attr)
-
-            h = F.relu(h)
    
             h = self.batch_norms[layer](h)
 
