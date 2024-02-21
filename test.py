@@ -58,7 +58,7 @@ def test_atom(loader, model, device):
 
         with torch.no_grad():
             #pred = model(batch)
-            pred, node = model(batch)
+            pred = model(batch)
         
         #print(pred)
    #     alpha=10

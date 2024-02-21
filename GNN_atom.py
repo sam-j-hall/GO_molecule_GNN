@@ -135,7 +135,7 @@ class GNN(torch.nn.Module):
 
 #        out = p(self.graph_pred_linear1(out))
 
-        return  out, h_select#, h_weight, h_out
+        return  out#, h_select#, h_weight, h_out
     
     def _initialize_weights(self):
         for m in self.modules():

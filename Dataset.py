@@ -38,8 +38,8 @@ class XASDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['data_coronene_4sets_0.6_final.json']
-        #return ['data_circumcoronene.json']
+        #return ['data_coronene_4sets_0.6_final.json']
+        return ['data_coronene.json']
 
 
     @property
