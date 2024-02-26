@@ -23,7 +23,7 @@ class XASDataset(InMemoryDataset):
                 ],
             }
     # Total number of atom features
-    ATOM_FDIM = sum(len(choices) for choices in ATOM_FEATURES.values()) + 1
+    ATOM_FDIM = sum(len(choices) for choices in ATOM_FEATURES.values()) + 4
     # Number of bond features?
     BOND_FDIM = 14
 
@@ -98,15 +98,22 @@ class XASDataset(InMemoryDataset):
         :param functional_groups: A k-hot vector indicating the functional groups the atom belongs to.
         :return: A list containing the atom features.
         """
+        numOs = 0
         if atom is None:
             features = [0] * ATOM_FDIM
         else:
+            for a in atom.GetNeighbors():
+                if a.GetAtomicNum() == 8:
+                    numOs += 1
             # Get the values of all the atom features and add all up to the feature vector
             features = self.onek_encoding_unk(atom.GetAtomicNum(), self.ATOM_FEATURES['atomic_num']) + \
                 self.onek_encoding_unk(int(atom.GetDegree()), self.ATOM_FEATURES['degree']) + \
                 self.onek_encoding_unk(int(atom.GetTotalNumHs()), self.ATOM_FEATURES['num_Hs']) + \
                 self.onek_encoding_unk(int(atom.GetHybridization()), self.ATOM_FEATURES['hybridization']) + \
-                [1 if atom.GetIsAromatic() else 0] 
+                [1 if atom.GetIsAromatic() else 0] + \
+                [1 if numOs==0 else 0] + \
+                [1 if numOs==1 else 0] + \
+                [1 if numOs==2 else 0]
             #if functional_groups is not None:
             #    features += functional_groups
                 
