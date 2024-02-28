@@ -126,8 +126,8 @@ class GNN(torch.nn.Module):
 
 #        ic(h_out.shape)
 
-        #out = torch.sigmoid(self.graph_pred_linear(h_select))
-        out = self.graph_pred_linear(h_new)
+        out = torch.sigmoid(self.graph_pred_linear(h_select))
+        out = self.graph_pred_linear(h_select)
 
 #        p = torch.nn.LeakyReLU(0.1)
    
