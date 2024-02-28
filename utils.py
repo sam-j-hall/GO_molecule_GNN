@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from bokeh.plotting import figure
 from bokeh.palettes import HighContrast3
+from rdkit import Chem
 
 def plot_spectra(true_spectrum, predicted_spectrum, save_var):
     """
@@ -105,3 +106,59 @@ def calculate_rse(prediction, true_result):
     denominator = np.sum(del_E * true_result)
 
     return np.sqrt(numerator) / denominator
+
+def count_funct_group(dataset):
+
+    """
+    Goes through a dataset and counts the functional group that the chosen
+    atom belongs to
+    """
+
+    oh_count = 0
+    cooh_count = 0
+    epo_count = 0
+    ald_count = 0
+    ket_count = 0
+
+    for i in range(len(dataset)):
+        # --- Turn molecule into rdkit mol
+        mol = Chem.MolFromSmiles(dataset[i].smiles)
+
+        # --- Define the functional group fragments to search for
+        oh_frag = Chem.MolFromSmarts('[#6][OX2H]')
+        cooh_frag = Chem.MolFromSmarts('[CX3](=[OX1])O')
+        epo_frag = Chem.MolFromSmarts('[#6]-[O]-[#6]')
+        ald_frag = Chem.MolFromSmarts('[CX3H1](=O)')
+        ket_frag = Chem.MolFromSmarts('[CX3C](=O)')
+
+        # --- Search mol for functional group matches
+        oh_match = mol.GetSubstructMatches(oh_frag)
+        cooh_match = mol.GetSubstructMatches(cooh_frag)
+        epo_match = mol.GetSubstructMatches(epo_frag)
+        ald_match = mol.GetSubstructMatches(ald_frag)
+        ket_match = mol.GetSubstructMatches(ket_frag)
+
+        # --- Turn match n-dimensional tuples to 1D list
+        oh_list = list(sum(oh_match, ()))
+        cooh_list = list(sum(cooh_match, ()))
+        epo_list = list(sum(epo_match, ()))
+        ald_list = list(sum(ald_match, ()))
+        ket_list = list(sum(ket_match, ()))
+
+        # --- Loop through molecule by atom and check if atom 
+        # --- matches the atom_num and then count if it belongs to 
+        # --- a certain functional group
+        for atom in mol.GetAtoms():
+            if atom.GetIdx() == dataset[i].atom_num:
+                if dataset[i].atom_num in epo_list:
+                    epo_count += 1
+                elif dataset[i].atom_num in ald_list:
+                    ald_count += 1
+                elif dataset[i].atom_num in cooh_list:
+                    cooh_count += 1
+                elif dataset[i].atom_num in oh_list:
+                    oh_count += 1
+                elif dataset[i].atom_num in ket_list:
+                    ket_count += 1
+
+    return oh_count, cooh_count, epo_count, ald_count, ket_count
