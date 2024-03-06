@@ -14,10 +14,9 @@ class XASDataset(InMemoryDataset):
     # class variables
     ATOM_FEATURES = {
             'atomic_num': [6.0, 8.0],
-            'degree': [0, 1, 2, 3, 4],
+            'degree': [1, 2, 3, 4],
             'num_Hs': [0.0, 1.0, 2.0],
             'hybridization': [
-                Chem.rdchem.HybridizationType.SP,
                 Chem.rdchem.HybridizationType.SP2,
                 Chem.rdchem.HybridizationType.SP3
                 ],
@@ -27,7 +26,7 @@ class XASDataset(InMemoryDataset):
     # Number of bond features?
     BOND_FDIM = 14
 
-    atom_ml = True
+    atom_ml = False
 
 
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None, atom_ml=False):
@@ -38,13 +37,13 @@ class XASDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        #return ['data_coronene_4sets_0.6_final.json']
-        return ['data_coronene.json']
+        return ['data_coronene_new.json']
+        #return ['data_circumcoronene.json']
 
 
     @property
     def processed_file_names(self):
-        return ['data_atom.pt']
+        return ['data_mol.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
@@ -216,7 +215,7 @@ class XASDataset(InMemoryDataset):
                 for j in atom_count[i]:
                     # Sum up all atom spectra
                     tot_spec += test_spec[str(j)]
-                    
+
                 # Create a graph 
                 gx = self.mol_to_nx(test_mol, tot_spec)
                 # Convert graph to pytorch geometric graph
