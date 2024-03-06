@@ -13,7 +13,7 @@ class XASDataset(InMemoryDataset):
     
     # class variables
     ATOM_FEATURES = {
-            'atomic_num': [1.0, 6.0, 8.0],
+            'atomic_num': [6.0, 8.0],
             'degree': [0, 1, 2, 3, 4],
             'num_Hs': [0.0, 1.0, 2.0],
             'hybridization': [
