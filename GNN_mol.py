@@ -111,9 +111,9 @@ class GNN_node(torch.nn.Module):
                 self.convs.append(GCNConv(in_c, out_c))
             elif gnn_type == 'gat':
                 if i == 1:
-                    self.convs.append(GATv2Conv(int(in_c), out_c, heads=int(heads)))
+                    self.convs.append(GATv2Conv(int(in_c), out_c, heads=int(heads), edge_dim=6))
                 else:
-                    self.convs.append(GATv2Conv(int(in_c*heads), out_c, heads=int(heads)))
+                    self.convs.append(GATv2Conv(int(in_c*heads), out_c, heads=int(heads), edge_dim=6))
             # elif gnn_type='mpnn':
             #     nn = Sequential(Linear(in_c, in_c), ReLU(), Linear(in_c, out_c * out_c))
             #     self.convs.append (NNConv(in_c, in_c, nn))
@@ -130,13 +130,13 @@ class GNN_node(torch.nn.Module):
         edge_attr = batched_data.edge_attr
         batch = batched_data.batch
    
-        edge_weight = None
+        #edge_weight = None
 
         ## computing input node embedding
         h_list = [x]
 
         for layer in range(self.num_layer):
-            h = self.convs[layer](h_list[layer], edge_index)#, edge_attr)
+            h = self.convs[layer](h_list[layer], edge_index, edge_attr=edge_attr)
 
             h = self.batch_norms[layer](h)
 
