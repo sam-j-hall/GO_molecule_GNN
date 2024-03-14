@@ -60,7 +60,7 @@ class GNN(torch.nn.Module):
 #             torch.nn.ReLU(),
 #             torch.nn.Linear(self.out_channels[-1], self.num_tasks))
             
-            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)
+            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1]*2, self.num_tasks)
             #self.graph_pred_linear1 = torch.nn.Linear(200, 200)
 	
 
@@ -113,6 +113,8 @@ class GNN(torch.nn.Module):
         h_weight = w1 * h_graph
         h_new = h_weight + h_select
 
+        h_new = torch.cat((h_graph, h_select), dim=1)
+
 
         #if h_select.dim() == 1:
          #   h_select = h_select.unsqueeze(0)
@@ -126,12 +128,12 @@ class GNN(torch.nn.Module):
 
 #        ic(h_out.shape)
 
-        out = torch.sigmoid(self.graph_pred_linear(h_select))
-        out = self.graph_pred_linear(h_select)
+        #out = torch.sigmoid(self.graph_pred_linear(h_new))
+        #out = self.graph_pred_linear(h_new)
 
-#        p = torch.nn.LeakyReLU(0.1)
+        p = torch.nn.LeakyReLU(0.1)
    
-#        out = p(self.graph_pred_linear(h_graph))
+        out = p(self.graph_pred_linear(h_new))
 
 #        out = p(self.graph_pred_linear1(out))
 
