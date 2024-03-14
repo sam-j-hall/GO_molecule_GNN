@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from bokeh.plotting import figure
+from bokeh.models import SingleIntervalTicker, LinearAxis
 from bokeh.palettes import HighContrast3
 from rdkit import Chem
 
@@ -96,6 +97,53 @@ def bokeh_spectra(ml_spectra, true_spectra):
     p.legend.label_text_font_size = '20px'
 
     return p
+
+def bokeh_hist(hist, edges):
+    p = figure(
+        x_axis_label = 'RSE value', y_axis_label = 'Frequency',
+        x_range = (edges[0], edges[-1]), y_range = (0,max(hist)+10),
+        width = 500, height = 450,
+        outline_line_color = 'black', outline_line_width = 2
+    )
+
+    p.toolbar.logo = None
+    p.toolbar_location = None
+    p.min_border = 25
+
+    # --- x-axis settings
+    p.xaxis.ticker.desired_num_ticks = 3
+    p.xaxis.axis_label_text_font_size = '24px'
+    p.xaxis.major_label_text_font_size = '24px'
+    p.xaxis.major_tick_in = 0
+    p.xaxis.major_tick_out = 10
+    p.xaxis.minor_tick_out = 6
+    p.xaxis.major_tick_line_width = 2
+    p.xaxis.minor_tick_line_width = 2
+    p.xaxis.major_tick_line_color = 'black'
+    p.xaxis.minor_tick_line_color = 'black'
+    # --- y-axis settings
+    p.yaxis.axis_label_text_font_size = '24px'
+    p.yaxis.major_label_text_font_size = '24px'
+    p.yaxis.major_tick_in = 0
+    p.yaxis.major_tick_out = 10
+    p.yaxis.major_tick_line_width = 2
+    p.yaxis.major_tick_line_color = 'black'
+    p.yaxis.minor_tick_line_color = None
+    p.yaxis.major_label_text_color = 'black'
+    # --- grid settings
+    p.grid.grid_line_color = 'grey'
+    p.grid.grid_line_alpha = 0.3
+    p.grid.grid_line_width = 1.5
+    p.grid.grid_line_dash = "dashed"
+
+    ticker = SingleIntervalTicker(interval=20)
+    xaxis = LinearAxis(ticker=ticker)
+
+    # --- Plot data
+    p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color='skyblue', line_color='black')
+    p.add_layout(xaxis, 'below')
+
+    return(p)
 
 def calculate_rse(prediction, true_result):
     
