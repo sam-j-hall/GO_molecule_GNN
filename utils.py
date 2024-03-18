@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from bokeh.plotting import figure
-from bokeh.models import SingleIntervalTicker, LinearAxis
+from bokeh.models import SingleIntervalTicker, LinearAxis, NumeralTickFormatter, Span
 from bokeh.palettes import HighContrast3
 from rdkit import Chem
 
@@ -98,10 +98,10 @@ def bokeh_spectra(ml_spectra, true_spectra):
 
     return p
 
-def bokeh_hist(hist, edges):
+def bokeh_hist(hist, edges, average):
     p = figure(
         x_axis_label = 'RSE value', y_axis_label = 'Frequency',
-        x_range = (edges[0], edges[-1]), y_range = (0,max(hist)+10),
+        x_range = (edges[0], edges[-1]), y_range = (0, max(hist)+2),
         width = 500, height = 450,
         outline_line_color = 'black', outline_line_width = 2
     )
@@ -121,6 +121,7 @@ def bokeh_hist(hist, edges):
     p.xaxis.minor_tick_line_width = 2
     p.xaxis.major_tick_line_color = 'black'
     p.xaxis.minor_tick_line_color = 'black'
+    p.xaxis[0].ticker.desired_num_ticks = 4
     # --- y-axis settings
     p.yaxis.axis_label_text_font_size = '24px'
     p.yaxis.major_label_text_font_size = '24px'
@@ -136,12 +137,17 @@ def bokeh_hist(hist, edges):
     p.grid.grid_line_width = 1.5
     p.grid.grid_line_dash = "dashed"
 
+    # --- Format x-axis
     ticker = SingleIntervalTicker(interval=20)
     xaxis = LinearAxis(ticker=ticker)
+    p.add_layout(xaxis, 'below')
 
     # --- Plot data
+    # --- Add histogram
     p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:], fill_color='skyblue', line_color='black')
-    p.add_layout(xaxis, 'below')
+    # --- Add average line
+    vline = Span(location=average, dimension='height', line_color='black', line_width=3, line_dash='dashed')
+    p.renderers.extend([vline])
 
     return(p)
 
