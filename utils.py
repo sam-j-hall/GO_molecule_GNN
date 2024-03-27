@@ -98,10 +98,10 @@ def bokeh_spectra(ml_spectra, true_spectra):
 
     return p
 
-def bokeh_hist(hist, edges, average):
+def bokeh_hist(hist, edges, average, spacing):
     p = figure(
         x_axis_label = 'RSE value', y_axis_label = 'Frequency',
-        x_range = (edges[0], edges[-1]), y_range = (0, max(hist)+2),
+        x_range = (edges[0], edges[-1]), y_range = (0, max(hist)+spacing),
         width = 500, height = 450,
         outline_line_color = 'black', outline_line_width = 2
     )

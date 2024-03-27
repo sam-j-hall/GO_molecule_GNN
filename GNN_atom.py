@@ -60,7 +60,7 @@ class GNN(torch.nn.Module):
 #             torch.nn.ReLU(),
 #             torch.nn.Linear(self.out_channels[-1], self.num_tasks))
             
-            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1]*2, self.num_tasks)
+            self.graph_pred_linear = torch.nn.Linear(self.out_channels[-1], self.num_tasks)
             #self.graph_pred_linear1 = torch.nn.Linear(200, 200)
 	
 
@@ -109,11 +109,11 @@ class GNN(torch.nn.Module):
 
 #        exit()
         # Compute the weighted sum of x_batch and x_sum
-        w1 = 1.0 # Adjust this value as needed
+        w1 = 0.5 # Adjust this value as needed
         h_weight = w1 * h_graph
         h_new = h_weight + h_select
 
-        h_new = torch.cat((h_graph, h_select), dim=1)
+        #h_new = torch.cat((h_graph, h_select), dim=1)
 
 
         #if h_select.dim() == 1:
