@@ -43,7 +43,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_atom.pt']
+        return ['data_atom_new.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
@@ -81,7 +81,8 @@ class XASDataset(InMemoryDataset):
                        edge_attr=self.bond_features(bond))
         
         # Normalize spectra to 1.0
-        max_intensity = np.max(spec)
+        #max_intensity = np.max(spec)
+        max_intensity = np.double(6471.923222767645)
         norm_spec = 1.0 * (spec / max_intensity)
         # Set spectra to graph
         G.graph['spectrum'] = norm_spec
