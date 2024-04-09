@@ -1,4 +1,5 @@
 import json
+import codecs
 import random
 import torch
 import numpy as np
@@ -26,7 +27,7 @@ class XASDataset(InMemoryDataset):
     # Number of bond features?
     BOND_FDIM = 14
 
-    atom_ml = True
+    atom_ml = False
 
 
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None, atom_ml=False):
@@ -37,13 +38,13 @@ class XASDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['data_coronene_new.json']
+        return ['data_coronene_schnet.json']
         #return ['data_circumcoronene.json']
 
 
     @property
     def processed_file_names(self):
-        return ['data_atom_new.pt']
+        return ['data_mol_schnet.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
@@ -81,8 +82,8 @@ class XASDataset(InMemoryDataset):
                        edge_attr=self.bond_features(bond))
         
         # Normalize spectra to 1.0
-        #max_intensity = np.max(spec)
-        max_intensity = np.double(6471.923222767645)
+        max_intensity = np.max(spec)
+        #max_intensity = np.double(6471.923222767645)
         norm_spec = 1.0 * (spec / max_intensity)
         # Set spectra to graph
         G.graph['spectrum'] = norm_spec
@@ -179,8 +180,11 @@ class XASDataset(InMemoryDataset):
         data_list = [...]
         
         # Open the data file and load the data
-        with open(self.raw_paths[0], "rb") as file:
-                dictionaries = json.load(file)
+        obj = codecs.open(self.raw_paths[0], 'r', encoding='utf-8').read()
+        dictionaries = json.loads(obj)
+
+#        with open(self.raw_paths[0], "rb") as file:
+#                dictionaries = json.load(file)
         
         # Create a list of all the molecule names from the data
         tot_ids = list(dictionaries[0].keys())
@@ -190,7 +194,7 @@ class XASDataset(InMemoryDataset):
         
         # For each molecule in the dataset
         for mol_id in tot_ids:
-            mol = Chem.MolFromSmiles(dictionaries[0][mol_id])
+            mol = Chem.MolFromSmiles(dictionaries[0][mol_id][0])
             # Find the total number of atoms of a given atomic number
             tot_atoms = self.count_atoms(mol, 6)
             atom_count.append(tot_atoms)
@@ -203,10 +207,16 @@ class XASDataset(InMemoryDataset):
         # For each molecule in dataset
         for i in range(len(tot_ids)):
             # Get the molecular structure from dictionary
-            test_mol = Chem.MolFromSmiles(dictionaries[0][tot_ids[i]])
+            test_mol = Chem.MolFromSmiles(dictionaries[0][tot_ids[i]][0])
             # Get all spectra data from dictionary
             test_spec = dictionaries[1][tot_ids[i]]
             
+            # Create arrays for datasaet
+            p = dictionaries[0][tot_ids[i]][1]
+            pos = np.array(p)
+            z_num = dictionaries[0][tot_ids[i]][2]
+            z = np.array(z_num)
+
             # For a whole molecule ML model
             if not self.atom_ml:
                 # Create empty array for summed spectra
@@ -221,6 +231,8 @@ class XASDataset(InMemoryDataset):
                 gx = self.mol_to_nx(test_mol, tot_spec)
                 # Convert graph to pytorch geometric graph
                 pyg_graph = from_networkx(gx)
+                pyg_graph.pos = torch.from_numpy(pos)
+                pyg_graph.z = torch.from_numpy(z)
                 pyg_graph.idx = idx
                 pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                 data_list.append(pyg_graph)
