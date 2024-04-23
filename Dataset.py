@@ -44,7 +44,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_mol_schnet.pt']
+        return ['data_mol.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
@@ -194,7 +194,7 @@ class XASDataset(InMemoryDataset):
         
         # For each molecule in the dataset
         for mol_id in tot_ids:
-            mol = Chem.MolFromSmiles(dictionaries[0][mol_id][0])
+            mol = Chem.MolFromSmiles(dictionaries[0][mol_id])#[0])
             # Find the total number of atoms of a given atomic number
             tot_atoms = self.count_atoms(mol, 6)
             atom_count.append(tot_atoms)
@@ -207,15 +207,15 @@ class XASDataset(InMemoryDataset):
         # For each molecule in dataset
         for i in range(len(tot_ids)):
             # Get the molecular structure from dictionary
-            test_mol = Chem.MolFromSmiles(dictionaries[0][tot_ids[i]][0])
+            test_mol = Chem.MolFromSmiles(dictionaries[0][tot_ids[i]])#[0])
             # Get all spectra data from dictionary
             test_spec = dictionaries[1][tot_ids[i]]
             
             # Create arrays for datasaet
-            p = dictionaries[0][tot_ids[i]][1]
-            pos = np.array(p)
-            z_num = dictionaries[0][tot_ids[i]][2]
-            z = np.array(z_num)
+            # p = dictionaries[0][tot_ids[i]][1]
+            # pos = np.array(p)
+            # z_num = dictionaries[0][tot_ids[i]][2]
+            # z = np.array(z_num)
 
             # For a whole molecule ML model
             if not self.atom_ml:
@@ -231,8 +231,8 @@ class XASDataset(InMemoryDataset):
                 gx = self.mol_to_nx(test_mol, tot_spec)
                 # Convert graph to pytorch geometric graph
                 pyg_graph = from_networkx(gx)
-                pyg_graph.pos = torch.from_numpy(pos)
-                pyg_graph.z = torch.from_numpy(z)
+                # pyg_graph.pos = torch.from_numpy(pos)
+                # pyg_graph.z = torch.from_numpy(z)
                 pyg_graph.idx = idx
                 pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                 data_list.append(pyg_graph)
