@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
-from torch_geometric.nn import GCNConv, GINConv, GATv2Conv, MLP, GINEConv, AttentionalAggregation, NNConv
+from torch_geometric.nn import GCNConv, GINConv, GATv2Conv, MLP, GINEConv, AttentionalAggregation, NNConv, PNAConv, CGConv
 import torch.nn.functional as F
 
 class GNN(torch.nn.Module):
@@ -182,14 +182,14 @@ class GNN_node(torch.nn.Module):
                 self.convs.append(GINConv(nn=mlp, train_eps=False))
             elif gnn_type =='gine':
                 mlp = MLP([in_c, in_c, out_c])
-                self.convs.append(GINEConv(nn=mlp, train_eps=False,edge_dim=7))
+                self.convs.append(GINEConv(nn=mlp, train_eps=False,edge_dim=6))
             elif gnn_type == 'gcn':
                 self.convs.append(GCNConv(in_c, out_c))
             elif gnn_type == 'gat':
                 if i == 0:
-                    self.convs.append(GATv2Conv(in_c, out_c, heads=int(heads),edge_dim=7))
+                    self.convs.append(GATv2Conv(in_c, out_c, heads=int(heads),edge_dim=6))
                 else:
-                    self.convs.append(GATv2Conv(int(in_c * heads), out_c, heads=1,edge_dim=7))
+                    self.convs.append(GATv2Conv(int(in_c * heads), out_c, heads=1,edge_dim=6))
             # elif gnn_type='mpnn':
             #     nn = Sequential(Linear(in_c, in_c), ReLU(), Linear(in_c, out_c * out_c))
             #     self.convs.append (NNConv(in_c, in_c, nn))
@@ -234,7 +234,7 @@ class GNN_node(torch.nn.Module):
 
         for layer in range(self.num_layer):
 
-            h = self.convs[layer](h_list[layer], edge_index)#, edge_attr=edge_attr)
+            h = self.convs[layer](h_list[layer], edge_index, edge_attr=edge_attr)
    
             h = self.batch_norms[layer](h)
 
@@ -328,6 +328,172 @@ class nnconv(torch.nn.Module):
         )
 
         self.conv3 = NNConv(128, 256, nn3, aggr='mean')
+        self.batchnorm3 = torch.nn.BatchNorm1d(256)
+
+        self.mlp = torch.nn.Linear(256, 200)
+
+    def forward(self, batched_data):
+
+        x = batched_data.x.float()
+        edge_index = batched_data.edge_index
+        edge_attr = batched_data.edge_attr.float()
+        batch = batched_data.batch
+
+         # Calculate the graph sizes
+        graph_sizes = torch.bincount(batch)
+        graph_indices = (batched_data.atom_num).unsqueeze(1)
+
+        x = self.conv1(x, edge_index, edge_attr)
+        x = self.batchnorm1(x)
+
+        x = F.relu(x)
+        x = F.dropout(x, self.drop_ratio, training=self.training)
+
+        x = self.conv2(x, edge_index, edge_attr)
+        x = self.batchnorm2(x)
+        x = F.relu(x)
+        x = F.dropout(x, self.drop_ratio, training=self.training)
+
+        x = self.conv3(x, edge_index, edge_attr)
+        x = self.batchnorm3(x)
+        x = F.relu(x)
+
+        node_rep = x
+
+        graph_sizes_list = graph_sizes.cpu().tolist()
+        graph_indices_list = graph_indices.cpu().tolist()
+
+        cumulative_sizes = [sum(graph_sizes_list[:i]) for i in range(len(graph_sizes_list))]
+
+        modified_indicies = [graph_indices_list[i][0] + cumulative_sizes[i] for i in range(len(graph_indices_list))]
+
+        node_select = node_rep[modified_indicies]
+
+        out = global_mean_pool(x, batch)
+
+        # Compute the weighted sum of x_batch and x_sum
+        w1 = 0.5 # Adjust this value as needed
+        h_weight = w1 * out
+        h_new = h_weight + node_select
+
+        out = self.mlp(h_new)
+
+        return out
+
+class PNA(torch.nn.Module):
+
+    def __init__(self, num_tasks, num_layer=4, emb_dim=100, in_channels=[33,100,100,100], out_channels=[100,100,100,100],
+                 gnn_type='gin', heads=None, drop_ratio=0.5, graph_pooling="sum", deg=None):
+        '''
+            num_tasks (int): number of labels to be predicted
+            virtual_node (bool): whether to add virtual node or not
+        '''
+
+        super(PNA, self).__init__()
+
+        self.num_layer = num_layer
+        self.drop_ratio = drop_ratio
+        self.emb_dim = emb_dim
+        self.num_tasks = num_tasks
+        self.graph_pooling = graph_pooling
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.heads = heads
+        self.deg = deg
+
+        aggregators = ['mean', 'min', 'max', 'std']
+        scalers = ['identity', 'amplification', 'attenuation']
+
+
+        self.conv1 = PNAConv(in_channels=15, out_channels=64, aggregators=aggregators, scalers=scalers,
+                             deg=self.deg, edge_dim=6)
+        self.batchnorm1 = torch.nn.BatchNorm1d(64)
+
+        self.conv2 = PNAConv(in_channels=64, out_channels=128, aggregators=aggregators, scalers=scalers,
+                            deg=self.deg, edge_dim=6)
+        self.batchnorm2 = torch.nn.BatchNorm1d(128)
+
+        self.conv3 = PNAConv(in_channels=128, out_channels=256, aggregators=aggregators, scalers=scalers,
+                            deg=self.deg, edge_dim=6)
+        self.batchnorm3 = torch.nn.BatchNorm1d(256)
+
+        self.mlp = torch.nn.Linear(256, 200)
+
+    def forward(self, batched_data):
+
+        x = batched_data.x.float()
+        edge_index = batched_data.edge_index
+        edge_attr = batched_data.edge_attr.float()
+        batch = batched_data.batch
+
+         # Calculate the graph sizes
+        graph_sizes = torch.bincount(batch)
+        graph_indices = (batched_data.atom_num).unsqueeze(1)
+
+        x = self.conv1(x, edge_index, edge_attr)
+        x = self.batchnorm1(x)
+
+        x = F.relu(x)
+        x = F.dropout(x, self.drop_ratio, training=self.training)
+
+        x = self.conv2(x, edge_index, edge_attr)
+        x = self.batchnorm2(x)
+        x = F.relu(x)
+        x = F.dropout(x, self.drop_ratio, training=self.training)
+
+        x = self.conv3(x, edge_index, edge_attr)
+        x = self.batchnorm3(x)
+        x = F.relu(x)
+
+        node_rep = x
+
+        graph_sizes_list = graph_sizes.cpu().tolist()
+        graph_indices_list = graph_indices.cpu().tolist()
+
+        cumulative_sizes = [sum(graph_sizes_list[:i]) for i in range(len(graph_sizes_list))]
+
+        modified_indicies = [graph_indices_list[i][0] + cumulative_sizes[i] for i in range(len(graph_indices_list))]
+
+        node_select = node_rep[modified_indicies]
+
+        out = global_mean_pool(x, batch)
+
+        # Compute the weighted sum of x_batch and x_sum
+        w1 = 0.5 # Adjust this value as needed
+        h_weight = w1 * out
+        h_new = h_weight + node_select
+
+        out = self.mlp(h_new)
+
+        return out
+    
+class CGC(torch.nn.Module):
+
+    def __init__(self, num_tasks, num_layer=4, emb_dim=100, in_channels=[33,100,100,100], out_channels=[100,100,100,100],
+                 gnn_type='gin', heads=None, drop_ratio=0.5, graph_pooling="sum"):
+        '''
+            num_tasks (int): number of labels to be predicted
+            virtual_node (bool): whether to add virtual node or not
+        '''
+
+        super(CGC, self).__init__()
+
+        self.num_layer = num_layer
+        self.drop_ratio = drop_ratio
+        self.emb_dim = emb_dim
+        self.num_tasks = num_tasks
+        self.graph_pooling = graph_pooling
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.heads = heads
+
+        self.conv1 = CGConv(channels=[15, 64], dim=6, aggr='mean')
+        self.batchnorm1 = torch.nn.BatchNorm1d(64)
+
+        self.conv2 = CGConv(channels=[64, 128], dim=6, aggr='mean')
+        self.batchnorm2 = torch.nn.BatchNorm1d(128)
+
+        self.conv3 = CGConv(channels=[128, 256], dim=6, aggr='mean')
         self.batchnorm3 = torch.nn.BatchNorm1d(256)
 
         self.mlp = torch.nn.Linear(256, 200)
