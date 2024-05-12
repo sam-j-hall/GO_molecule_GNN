@@ -38,7 +38,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['data_coronene_schnet.json']
+        return ['data_coronene.json']
         #return ['data_circumcoronene.json']
 
 
@@ -82,8 +82,9 @@ class XASDataset(InMemoryDataset):
                        edge_attr=self.bond_features(bond))
         
         # Normalize spectra to 1.0
-        max_intensity = np.max(spec)
-        #max_intensity = np.double(6471.923222767645)
+        #max_intensity = np.max(spec)
+        max_intensity = np.double(6471.923222767645)
+        #max_intensity = np.double(6924.662753770557) # circum
         norm_spec = 1.0 * (spec / max_intensity)
         # Set spectra to graph
         G.graph['spectrum'] = norm_spec
@@ -194,7 +195,7 @@ class XASDataset(InMemoryDataset):
         
         # For each molecule in the dataset
         for mol_id in tot_ids:
-            mol = Chem.MolFromSmiles(dictionaries[0][mol_id])#[0])
+            mol = Chem.MolFromSmiles(dictionaries[0][mol_id][0])
             # Find the total number of atoms of a given atomic number
             tot_atoms = self.count_atoms(mol, 6)
             atom_count.append(tot_atoms)
@@ -207,15 +208,15 @@ class XASDataset(InMemoryDataset):
         # For each molecule in dataset
         for i in range(len(tot_ids)):
             # Get the molecular structure from dictionary
-            test_mol = Chem.MolFromSmiles(dictionaries[0][tot_ids[i]])#[0])
+            test_mol = Chem.MolFromSmiles(dictionaries[0][tot_ids[i]][0])
             # Get all spectra data from dictionary
             test_spec = dictionaries[1][tot_ids[i]]
             
             # Create arrays for datasaet
-            # p = dictionaries[0][tot_ids[i]][1]
-            # pos = np.array(p)
-            # z_num = dictionaries[0][tot_ids[i]][2]
-            # z = np.array(z_num)
+            p = dictionaries[0][tot_ids[i]][1]
+            pos = np.array(p)
+            z_num = dictionaries[0][tot_ids[i]][2]
+            z = np.array(z_num)
 
             # For a whole molecule ML model
             if not self.atom_ml:
@@ -231,8 +232,8 @@ class XASDataset(InMemoryDataset):
                 gx = self.mol_to_nx(test_mol, tot_spec)
                 # Convert graph to pytorch geometric graph
                 pyg_graph = from_networkx(gx)
-                # pyg_graph.pos = torch.from_numpy(pos)
-                # pyg_graph.z = torch.from_numpy(z)
+                pyg_graph.pos = torch.from_numpy(pos)
+                pyg_graph.z = torch.from_numpy(z)
                 pyg_graph.idx = idx
                 pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                 data_list.append(pyg_graph)
@@ -248,11 +249,13 @@ class XASDataset(InMemoryDataset):
                     pyg_graph = from_networkx(gx)
                     
             
-                    msg = self.message_pass(pyg_graph.x, pyg_graph.edge_index)
-                    msg = self.message_pass(msg, pyg_graph.edge_index)
-                    msg = self.message_pass(msg, pyg_graph.edge_index)
-                    pyg_graph.vector = msg[j]
+                    # msg = self.message_pass(pyg_graph.x, pyg_graph.edge_index)
+                    # msg = self.message_pass(msg, pyg_graph.edge_index)
+                    # msg = self.message_pass(msg, pyg_graph.edge_index)
+                    # pyg_graph.vector = msg[j]
             
+                    pyg_graph.pos = torch.from_numpy(pos)
+                    pyg_graph.z = torch.from_numpy(z)
                     pyg_graph.idx = idx
                     pyg_graph.smiles = Chem.MolToSmiles(test_mol)
                     neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
