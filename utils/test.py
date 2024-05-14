@@ -58,8 +58,11 @@ def test_atom(loader, model, device):
 
         with torch.no_grad():
             #pred = model(batch)
-            pred = model(batch)
-        
+            pred, select = model(batch)
+
+        out = pred[0].cpu().detach().numpy()
+        true = batch.spectrum[0].cpu().detach().numpy()
+
         #print(pred)
    #     alpha=10
        # loss = nn.MSELoss()(pred.view(-1, 1).double(),
@@ -71,4 +74,4 @@ def test_atom(loader, model, device):
        #                 batch.y.view(-1, 1).double())
         loss_all += loss.item() * batch.num_graphs
 
-    return loss_all / len(loader.dataset)
+    return loss_all / len(loader.dataset), out, true, select

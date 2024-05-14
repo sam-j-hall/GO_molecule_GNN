@@ -70,7 +70,7 @@ def train_atom(epoch, loader, model, device, optimizer):
 
         optimizer.zero_grad()
         
-        pred = model(batch)
+        pred, select = model(batch)
         #pred = model(batch)
         batch_size = batch.spectrum.shape[0] // 200
         batch.spectrum = batch.spectrum.view(batch_size, 200)
@@ -124,4 +124,4 @@ def train_atom(epoch, loader, model, device, optimizer):
     
     #print(len(train_loader.dataset))
         #emb_list.append(emb)
-    return loss_all / len(loader.dataset), out, true#, a ,b ,c ,d, out, true
+    return loss_all / len(loader.dataset), out, true, select#, a ,b ,c ,d, out, true

@@ -136,7 +136,7 @@ class GNN(torch.nn.Module):
 
 #        out = p(self.graph_pred_linear1(out))
 
-        return  out#, h_select#, h_weight, h_out
+        return  out, h_select#, h_weight, h_out
     
     def _initialize_weights(self):
         for m in self.modules():
@@ -213,7 +213,11 @@ class GNN_node(torch.nn.Module):
         batch = batched_data.batch
         graph_indices = (batched_data.atom_num).unsqueeze(1)
         edge_weight = None
-        
+        pos = batched_data.pos
+
+        # for i in range(len(pos)):
+        #     x = x + sum(pos[i])
+
         #edge_attr=edge_attr(dtype=torch.float)
 #        ic(type(edge_attr))
  #       ic(type(x))
@@ -234,19 +238,17 @@ class GNN_node(torch.nn.Module):
 
         for layer in range(self.num_layer):
 
-            h = self.convs[layer](h_list[layer], edge_index, edge_attr=edge_attr)
+            x = self.convs[layer](x, edge_index)#, edge_attr=edge_attr)
    
-            h = self.batch_norms[layer](h)
+            x = self.batch_norms[layer](x)
 
             if layer == self.num_layer - 1:
                 # remove relu for the last layer
-                h = F.dropout(h, self.drop_ratio, training=self.training)
+                x = F.dropout(x, self.drop_ratio, training=self.training)
             else:
-                h = F.dropout(F.relu(h), self.drop_ratio, training=self.training)
+                x = F.dropout(F.relu(x), self.drop_ratio, training=self.training)
 
-            h_list.append(h)
-        
-        #ic(h_list[0].shape)
+            h_list.append(x)
 
             # for layer in range(self.num_layer):            #     node_representation += h_list[layer]
                 
@@ -266,11 +268,9 @@ class GNN_node(torch.nn.Module):
         cumulative_sizes = [sum(graph_sizes_list[:i]) for i in range(len(graph_sizes_list))]
        # cumulative_sizes_list = cumulative_sizes.)
         
-        #print(cumulative_sizes)
 
         # Compute modified indices in the batch
         modified_indices = [graph_indices_list[i][0] + cumulative_sizes[i] for i in range(len(graph_indices_list))]
-       
         #print(modified_indices)
 
       #  print(node_representation, batch_index)
@@ -280,7 +280,7 @@ class GNN_node(torch.nn.Module):
         
         node_select = node_representation[modified_indices]
         #print(node_representation,node_select)
-
+        
         return node_representation, node_select
     
 class nnconv(torch.nn.Module):
@@ -487,14 +487,11 @@ class CGC(torch.nn.Module):
         self.out_channels = out_channels
         self.heads = heads
 
-        self.conv1 = CGConv(channels=[15, 64], dim=6, aggr='mean')
-        self.batchnorm1 = torch.nn.BatchNorm1d(64)
+        self.conv1 = CGConv(channels=[15, 64], dim=6, aggr='mean', batch_norm=True)
 
-        self.conv2 = CGConv(channels=[64, 128], dim=6, aggr='mean')
-        self.batchnorm2 = torch.nn.BatchNorm1d(128)
+        self.conv2 = CGConv(channels=[64, 128], dim=6, aggr='mean', batch_norm=True)
 
-        self.conv3 = CGConv(channels=[128, 256], dim=6, aggr='mean')
-        self.batchnorm3 = torch.nn.BatchNorm1d(256)
+        self.conv3 = CGConv(channels=[128, 256], dim=6, aggr='mean', batch_norm=True)
 
         self.mlp = torch.nn.Linear(256, 200)
 
@@ -510,18 +507,15 @@ class CGC(torch.nn.Module):
         graph_indices = (batched_data.atom_num).unsqueeze(1)
 
         x = self.conv1(x, edge_index, edge_attr)
-        x = self.batchnorm1(x)
 
         x = F.relu(x)
         x = F.dropout(x, self.drop_ratio, training=self.training)
 
         x = self.conv2(x, edge_index, edge_attr)
-        x = self.batchnorm2(x)
         x = F.relu(x)
         x = F.dropout(x, self.drop_ratio, training=self.training)
 
         x = self.conv3(x, edge_index, edge_attr)
-        x = self.batchnorm3(x)
         x = F.relu(x)
 
         node_rep = x

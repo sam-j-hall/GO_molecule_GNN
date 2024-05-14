@@ -44,7 +44,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_atom.pt']
+        return ['data_atom_short.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
@@ -107,15 +107,27 @@ class XASDataset(InMemoryDataset):
             for a in atom.GetNeighbors():
                 if a.GetAtomicNum() == 8:
                     numOs += 1
+
+            if atom.GetHybridization() == Chem.rdchem.HybridizationType.SP2:
+                hybrid = 2
+            elif atom.GetHybridization() == Chem.rdchem.HybridizationType.SP3:
+                hybrid = 3
+
+            if atom.GetIsAromatic() == True:
+                aroma = 1
+            elif atom.GetIsAromatic() == False:
+                aroma = 0
+
+            features = atom.GetAtomicNum(), atom.GetDegree(), atom.GetTotalNumHs(), hybrid, aroma
             # Get the values of all the atom features and add all up to the feature vector
-            features = self.onek_encoding_unk(atom.GetAtomicNum(), self.ATOM_FEATURES['atomic_num']) + \
-                self.onek_encoding_unk(int(atom.GetDegree()), self.ATOM_FEATURES['degree']) + \
-                self.onek_encoding_unk(int(atom.GetTotalNumHs()), self.ATOM_FEATURES['num_Hs']) + \
-                self.onek_encoding_unk(int(atom.GetHybridization()), self.ATOM_FEATURES['hybridization']) + \
-                [1 if atom.GetIsAromatic() else 0] + \
-                [1 if numOs==0 else 0] + \
-                [1 if numOs==1 else 0] + \
-                [1 if numOs==2 else 0]
+            # features = self.onek_encoding_unk(atom.GetAtomicNum(), self.ATOM_FEATURES['atomic_num']) + \
+            #     self.onek_encoding_unk(int(atom.GetDegree()), self.ATOM_FEATURES['degree']) + \
+            #     self.onek_encoding_unk(int(atom.GetTotalNumHs()), self.ATOM_FEATURES['num_Hs']) + \
+            #     self.onek_encoding_unk(int(atom.GetHybridization()), self.ATOM_FEATURES['hybridization']) + \
+            #     [1 if atom.GetIsAromatic() else 0] + \
+            #     [1 if numOs==0 else 0] + \
+            #     [1 if numOs==1 else 0] + \
+            #     [1 if numOs==2 else 0]
             #if functional_groups is not None:
             #    features += functional_groups
                 
@@ -134,14 +146,30 @@ class XASDataset(InMemoryDataset):
         else:
             # Get the bond type and create one-hot enconding vector
             bt = bond.GetBondType()
-            fbond = [
-                0,  # bond is not None
-                int(bt == Chem.rdchem.BondType.SINGLE),
-                int(bt == Chem.rdchem.BondType.DOUBLE),
-                int(bt == Chem.rdchem.BondType.AROMATIC),
-                int(bond.GetIsConjugated() if bt is not None else 0),
-                int(bond.IsInRing() if bt is not None else 0)
-            ]
+            if bt == Chem.rdchem.BondType.SINGLE:
+                typ = 1
+            elif bt == Chem.rdchem.BondType.DOUBLE:
+                typ = 2
+            elif bt == Chem.rdchem.BondType.AROMATIC:
+                typ = 3
+
+            if bond.GetIsConjugated() == True:
+                conj = 1
+            else:
+                conj = 0
+
+            if bond.IsInRing() == True:
+                ring = 1
+            else:
+                ring = 0
+            fbond = [ typ, conj, ring]
+            #     0,  # bond is not None
+            #     int(bt == Chem.rdchem.BondType.SINGLE),
+            #     int(bt == Chem.rdchem.BondType.DOUBLE),
+            #     int(bt == Chem.rdchem.BondType.AROMATIC),
+            #     int(bond.GetIsConjugated() if bt is not None else 0),
+            #     int(bond.IsInRing() if bt is not None else 0)
+            # ]
         return fbond
 
     
