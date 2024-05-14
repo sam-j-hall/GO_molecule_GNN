@@ -304,16 +304,16 @@ class nnconv(torch.nn.Module):
         self.heads = heads
 
         nn1 = torch.nn.Sequential(
-            torch.nn.Linear(6, 32),
+            torch.nn.Linear(3, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(32, 15 * 64)
+            torch.nn.Linear(32, 5 * 64)
         )
 
-        self.conv1 = NNConv(15, 64, nn1, aggr='mean')
+        self.conv1 = NNConv(5, 64, nn1, aggr='mean')
         self.batchnorm1 = torch.nn.BatchNorm1d(64)
 
         nn2 = torch.nn.Sequential(
-            torch.nn.Linear(6, 32),
+            torch.nn.Linear(3, 32),
             torch.nn.ReLU(),
             torch.nn.Linear(32, 64 * 128)
         )
@@ -322,7 +322,7 @@ class nnconv(torch.nn.Module):
         self.batchnorm2 = torch.nn.BatchNorm1d(128)
 
         nn3 = torch.nn.Sequential(
-            torch.nn.Linear(6, 32),
+            torch.nn.Linear(3, 32),
             torch.nn.ReLU(),
             torch.nn.Linear(32, 128 * 256)
         )
@@ -378,7 +378,7 @@ class nnconv(torch.nn.Module):
 
         out = self.mlp(h_new)
 
-        return out
+        return out, node_select
 
 class PNA(torch.nn.Module):
 
@@ -405,16 +405,16 @@ class PNA(torch.nn.Module):
         scalers = ['identity', 'amplification', 'attenuation']
 
 
-        self.conv1 = PNAConv(in_channels=15, out_channels=64, aggregators=aggregators, scalers=scalers,
-                             deg=self.deg, edge_dim=6)
+        self.conv1 = PNAConv(in_channels=5, out_channels=64, aggregators=aggregators, scalers=scalers,
+                             deg=self.deg, edge_dim=3)
         self.batchnorm1 = torch.nn.BatchNorm1d(64)
 
         self.conv2 = PNAConv(in_channels=64, out_channels=128, aggregators=aggregators, scalers=scalers,
-                            deg=self.deg, edge_dim=6)
+                            deg=self.deg, edge_dim=3)
         self.batchnorm2 = torch.nn.BatchNorm1d(128)
 
         self.conv3 = PNAConv(in_channels=128, out_channels=256, aggregators=aggregators, scalers=scalers,
-                            deg=self.deg, edge_dim=6)
+                            deg=self.deg, edge_dim=3)
         self.batchnorm3 = torch.nn.BatchNorm1d(256)
 
         self.mlp = torch.nn.Linear(256, 200)
@@ -463,7 +463,7 @@ class PNA(torch.nn.Module):
         h_weight = w1 * out
         h_new = h_weight + node_select
 
-        out = self.mlp(h_new)
+        out = self.mlp(h_new), node_select
 
         return out
     
