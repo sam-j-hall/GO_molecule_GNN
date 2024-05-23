@@ -27,7 +27,7 @@ class XASDataset(InMemoryDataset):
     # Number of bond features?
     BOND_FDIM = 14
 
-    atom_ml = True
+    atom_ml = False
 
 
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None, atom_ml=False):
@@ -44,7 +44,7 @@ class XASDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_atom_short.pt']
+        return ['data_mol_short.pt']
 
 
     def onek_encoding_unk(self, value:int, choices:List[int]) -> List[int]:
@@ -82,8 +82,8 @@ class XASDataset(InMemoryDataset):
                        edge_attr=self.bond_features(bond))
         
         # Normalize spectra to 1.0
-        #max_intensity = np.max(spec)
-        max_intensity = np.double(6471.923222767645)
+        max_intensity = np.max(spec)
+        #max_intensity = np.double(6471.923222767645)
         #max_intensity = np.double(6924.662753770557) # circum
         norm_spec = 1.0 * (spec / max_intensity)
         # Set spectra to graph
@@ -106,17 +106,17 @@ class XASDataset(InMemoryDataset):
         else:
             for a in atom.GetNeighbors():
                 if a.GetAtomicNum() == 8:
-                    numOs += 1
+                    numOs += 1.0
 
             if atom.GetHybridization() == Chem.rdchem.HybridizationType.SP2:
-                hybrid = 2
+                hybrid = 2.0
             elif atom.GetHybridization() == Chem.rdchem.HybridizationType.SP3:
-                hybrid = 3
+                hybrid = 3.0
 
             if atom.GetIsAromatic() == True:
-                aroma = 1
+                aroma = 1.0
             elif atom.GetIsAromatic() == False:
-                aroma = 0
+                aroma = 0.0
 
             features = atom.GetAtomicNum(), atom.GetDegree(), atom.GetTotalNumHs(), hybrid, aroma
             # Get the values of all the atom features and add all up to the feature vector
@@ -147,21 +147,21 @@ class XASDataset(InMemoryDataset):
             # Get the bond type and create one-hot enconding vector
             bt = bond.GetBondType()
             if bt == Chem.rdchem.BondType.SINGLE:
-                typ = 1
+                typ = 1.0
             elif bt == Chem.rdchem.BondType.DOUBLE:
-                typ = 2
+                typ = 2.0
             elif bt == Chem.rdchem.BondType.AROMATIC:
-                typ = 3
+                typ = 3.0
 
             if bond.GetIsConjugated() == True:
-                conj = 1
+                conj = 1.0
             else:
-                conj = 0
+                conj = 0.0
 
             if bond.IsInRing() == True:
-                ring = 1
+                ring = 1.0
             else:
-                ring = 0
+                ring = 0.0
             fbond = [ typ, conj, ring]
             #     0,  # bond is not None
             #     int(bt == Chem.rdchem.BondType.SINGLE),
@@ -269,28 +269,67 @@ class XASDataset(InMemoryDataset):
                 
             else: # For individual atom ML model
                 
+                for j in test_mol.GetAtoms():
+                    if j.GetAtomicNum() == 6:
+                        spec_dict = test_spec[str(j.GetIdx())]
+
                 # For every atom in each molecule
-                for j in atom_count[i]:
-                    # For individual atom ML model
-                    spec_dict = test_spec[str(j)]
-                    gx = self.mol_to_nx(test_mol, spec_dict)
-                    pyg_graph = from_networkx(gx)
+                # for j in atom_count[i]:
+                #     # For individual atom ML model
+                #     spec_dict = test_spec[str(j)]
+                        gx = self.mol_to_nx(test_mol, spec_dict)
+                        pyg_graph = from_networkx(gx)
                     
+
+                        # --- Define the functional group fragments to search for
+                        oh_frag = Chem.MolFromSmarts('[#6][OX2H]')
+                        cooh_frag = Chem.MolFromSmarts('[CX3](=[OX1])O')
+                        epo_frag = Chem.MolFromSmarts('[#6]-[O]-[#6]')
+                        ald_frag = Chem.MolFromSmarts('[CX3H1](=O)')
+                        ket_frag = Chem.MolFromSmarts('[CX3C](=O)')
+
+                        # --- Search mol for functional group matches
+                        oh_match = mol.GetSubstructMatches(oh_frag)
+                        cooh_match = mol.GetSubstructMatches(cooh_frag)
+                        epo_match = mol.GetSubstructMatches(epo_frag)
+                        ald_match = mol.GetSubstructMatches(ald_frag)
+                        ket_match = mol.GetSubstructMatches(ket_frag)
+
+                        # --- Turn match n-dimensional tuples to 1D list
+                        oh_list = list(sum(oh_match, ()))
+                        cooh_list = list(sum(cooh_match, ()))
+                        epo_list = list(sum(epo_match, ()))
+                        ald_list = list(sum(ald_match, ()))
+                        ket_list = list(sum(ket_match, ()))
+
+                        num = j.GetIdx()
+                        if num in epo_list:
+                            pyg_graph.y = torch.tensor((1,0,0,0,0,0))
+                        elif num in ald_list:
+                            pyg_graph.y = torch.tensor((0,1,0,0,0,0))
+                        elif num in cooh_list:
+                            pyg_graph.y = torch.tensor((0,0,1,0,0,0))
+                        elif num in oh_list:
+                            pyg_graph.y = torch.tensor((0,0,0,1,0,0))
+                        elif num in ket_list:
+                            pyg_graph.y = torch.tensor((0,0,0,0,1,0))
+                        else:
+                            pyg_graph.y = torch.tensor((0,0,0,0,0,1))
             
                     # msg = self.message_pass(pyg_graph.x, pyg_graph.edge_index)
                     # msg = self.message_pass(msg, pyg_graph.edge_index)
                     # msg = self.message_pass(msg, pyg_graph.edge_index)
                     # pyg_graph.vector = msg[j]
             
-                    pyg_graph.pos = torch.from_numpy(pos)
-                    pyg_graph.z = torch.from_numpy(z)
-                    pyg_graph.idx = idx
-                    pyg_graph.smiles = Chem.MolToSmiles(test_mol)
-                    neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
-                    pyg_graph.atom_num = j
-                    pyg_graph.neighbors = neighbors
-                    data_list.append(pyg_graph)
-                    idx += 1
+                        pyg_graph.pos = torch.from_numpy(pos)
+                        pyg_graph.z = torch.from_numpy(z)
+                        pyg_graph.idx = idx
+                        pyg_graph.smiles = Chem.MolToSmiles(test_mol)
+                        #neighbors = [x.GetIdx() for x in test_mol.GetAtomWithIdx(j).GetNeighbors()]
+                        pyg_graph.atom_num = j.GetIdx()
+                        #pyg_graph.neighbors = neighbors
+                        data_list.append(pyg_graph)
+                        idx += 1
         
         random.Random(258).shuffle(data_list)
 
