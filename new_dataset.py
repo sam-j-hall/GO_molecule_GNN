@@ -9,7 +9,7 @@ from torch_geometric.data import InMemoryDataset
 from torch_geometric.utils.convert import from_networkx
 from typing import List, Union
 
-def mol_to_nx(mol, spec):
+def mol_to_nx(mol, spec, atom=True):
     '''
     text
     '''
@@ -20,7 +20,8 @@ def mol_to_nx(mol, spec):
     # --- For each atom in molecule
     for atom in mol.GetAtoms():
         # --- Add a node to graph and create one-hot encoding vector for atom features
-        G.add_node(atom.GetAtomMapNum(), x=get_atom_features(atom))
+        map_num = atom.GetAtomMapNum()
+        G.add_node(map_num, x=get_atom_features(atom))
             
     # --- For each bond in molecule
     for bond in mol.GetBonds():
@@ -32,11 +33,12 @@ def mol_to_nx(mol, spec):
         # --- Add edge to graph and create one-hot encoding vector of bond features
         G.add_edge(begin_map, end_map, edge_attr=get_bond_features(bond))
         
-    # --- Normalize spectra to 1.0
-    max_intensity = np.max(spec)
-    norm_spec = 1.0 * (spec / max_intensity)
-    # --- Set spectra to graph
-    G.graph['spectrum'] = norm_spec
+    if atom == False:
+        # --- Normalize spectra to 1.0
+        max_intensity = np.max(spec)
+        norm_spec = 1.0 * (spec / max_intensity)
+        # --- Set spectra to graph
+        G.graph['spectrum'] = norm_spec
         
     return G
     
@@ -189,7 +191,7 @@ class XASDataset_mol(InMemoryDataset):
                 tot_spec += atom_spec[str(j)]
 
             # --- Create graph object
-            gx = mol_to_nx(mol, tot_spec)
+            gx = mol_to_nx(mol, tot_spec, atom=False)
             # --- Convert to pyg
             pyg_graph = from_networkx(gx)
             pyg_graph.pos = torch.from_numpy(positions)
@@ -258,42 +260,60 @@ class XASDataset_atom(InMemoryDataset):
         dictionaires = json.load(dat)
 
         # --- Create list with all the molecule names
-        tot_ids = list(dictionaires[0].keys())
-        print(f'Total number of molecules {len(tot_ids)}')
+        all_names = list(dictionaires[0].keys())
+        print(f'Total number of molecules {len(all_names)}')
 
         # --- 
         idx = 0
         
-        for id in tot_ids:
+        for name in all_names:
             # --- 
-            mol = Chem.MolFromSmiles(dictionaires[0][id][0])
+            smiles = dictionaires[0][name][0]
+            mol = Chem.MolFromSmiles(smiles)
             # ---
-            atom_spec = dictionaires[1][id]
+            atom_spec = dictionaires[1][name]
 
             # --- Create arrays of dataset
-            pos = dictionaires[0][id][1]
+            pos = dictionaires[0][name][1]
             positions = np.array(pos)
-            z_num = dictionaires[0][id][2]
+            z_num = dictionaires[0][name][2]
             z = np.array(z_num)
-            atom_count = count_atoms(mol, 6)
-
+            atom_count = 0
             for atom in mol.GetAtoms():
-                if atom.GetAtomicNum() == 6:
-                    spec_dict = atom_spec[str(atom.GetAtomMapNum())]
+                atom_count += 1
+
+            spec_list = torch.zeros([atom_count, 200])
+        
+            for x in range(len(atom_spec)):
+                sp = atom_spec[str(x)]
+                spec_list[x] = torch.DoubleTensor(sp)
+
+            map_dict = {}
+            for atom in enumerate(mol.GetAtoms()):
+                map = atom[1].GetAtomMapNum()
+                map_dict[atom[0]] = map
+
+            # for map_num in enumerate(map_list):
+            #     spec_list
+
+
+                    # spec_dict = atom_spec[str(atom.GetIdx())]
 
             #for j in range(atom_count):
 
-                # --- Create graph object
-                gx = mol_to_nx(mol, spec_dict)
-                # --- Convert to pyg
-                pyg_graph = from_networkx(gx)
-                pyg_graph.pos = torch.from_numpy(positions)
-                pyg_graph.z = torch.from_numpy(z)
-                pyg_graph.idx = idx
-                pyg_graph.smiles = dictionaires[0][id][0]
-                pyg_graph.atom_num = atom.GetIdx()
-                data_list.append(pyg_graph)
-                idx += 1
+            # --- Create graph object
+            gx = mol_to_nx(mol, spec_list, atom=True)
+
+            # --- Convert to pyg
+            pyg_graph = from_networkx(gx)
+            pyg_graph.y = spec_list
+            pyg_graph.pos = torch.from_numpy(positions)
+            pyg_graph.z = torch.from_numpy(z)
+            pyg_graph.idx = idx
+            pyg_graph.smiles = smiles
+            # pyg_graph.atom_num = atom.GetIdx()
+            data_list.append(pyg_graph)
+            idx += 1
 
         random.Random(258).shuffle(data_list)
 
