@@ -261,7 +261,7 @@ class XASDataset_atom(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return ['data_atom_long_7895.pt']
+        return ['data_atom_long_317.pt']
     
     def process(self):
         '''
@@ -281,7 +281,7 @@ class XASDataset_atom(InMemoryDataset):
 
         # --- 
         idx = 0
-        individual_graphs = True
+        individual_graphs = False
 
         for name in all_names:
             # --- 

@@ -18,8 +18,8 @@ def train_model(model, loader, optimizer, device):
 
         pred = model(data)
         
-        data_size = data.spectrum.shape[0] // 200
-        data.spectrum = data.spectrum.view(data_size, 200)
+        # data_size = data.spectrum.shape[0] // 200
+        # data.spectrum = data.spectrum.view(data_size, 200)
         loss = nn.MSELoss()(pred, data.spectrum).float()
 
         total_loss += loss.item() * data.num_graphs
@@ -28,7 +28,7 @@ def train_model(model, loader, optimizer, device):
 
         optimizer.step()
 
-    return total_loss / len(loader.dataset)
+    return total_loss / len(loader.dataset)#, node_embedding
 
 def val_test(model, loader, device):
     '''
@@ -44,8 +44,8 @@ def val_test(model, loader, device):
 
         pred = model(data)
 
-        data_size = data.spectrum.shape[0] // 200
-        data.spectrum = data.spectrum.view(data_size, 200)
+        # data_size = data.spectrum.shape[0] // 200
+        # data.spectrum = data.spectrum.view(data_size, 200)
 
         loss = nn.MSELoss()(pred, data.spectrum)
 
@@ -60,7 +60,7 @@ def get_spec_prediction(model, index, dataset, device):
     # --- Set the model to evaluation mode
     model.eval()
 
-    # --- Get a single grpahe from the test dataset
+    # --- Get a single graph from the test dataset
     graph_index = index
     graph_data = dataset[graph_index].to(device)
     data = Batch.from_data_list([graph_data])
