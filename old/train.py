@@ -125,3 +125,28 @@ def train_atom(epoch, loader, model, device, optimizer):
     #print(len(train_loader.dataset))
         #emb_list.append(emb)
     return loss_all / len(loader.dataset), out, true, select#, a ,b ,c ,d, out, true
+
+def new_train(model, loader, optimizer, device):
+
+    model.train()
+
+    total_loss = 0
+
+    for data in loader:
+        data = data.to(device)
+
+        optimizer.zero_grad()
+
+        pred = model(data)
+        data_size = data.spectrum.shape[0] // 200
+        data.spectrum = data.spectrum.view(data_size, 200)
+
+        loss = nn.MSELoss()(pred, data.spectrum)
+
+        total_loss += loss.item() * data.num_graphs
+
+        loss.backward()
+
+        optimizer.step()
+
+    return total_loss / len(loader.dataset)

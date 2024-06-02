@@ -75,3 +75,20 @@ def test_atom(loader, model, device):
         loss_all += loss.item() * batch.num_graphs
 
     return loss_all / len(loader.dataset), out, true, select
+
+def new_test(model, loader, device):
+    model.eval()
+
+    total_loss = 0
+    for data in loader:
+        data = data.to(device)
+
+        pred = model(data)
+        data_size = data.spectrum.shape[0] // 200
+        data.spectrum = data.spectrum.view(data_size, 200)
+
+        loss = nn.MSELoss()(pred, data.spectrum)
+
+        total_loss += loss.item() * data.num_graphs
+
+    return total_loss / len(loader.dataset)
