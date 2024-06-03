@@ -18,8 +18,9 @@ def train_model(model, loader, optimizer, device):
 
         pred = model(data)
         
-        # data_size = data.spectrum.shape[0] // 200
-        # data.spectrum = data.spectrum.view(data_size, 200)
+        data_size = data.spectrum.shape[0] // 200
+        data.spectrum = data.spectrum.view(data_size, 200)
+
         loss = nn.MSELoss()(pred, data.spectrum).float()
 
         total_loss += loss.item() * data.num_graphs
@@ -28,7 +29,7 @@ def train_model(model, loader, optimizer, device):
 
         optimizer.step()
 
-    return total_loss / len(loader.dataset)#, node_embedding
+    return total_loss / len(loader.dataset)#, embedding
 
 def val_test(model, loader, device):
     '''
@@ -44,9 +45,9 @@ def val_test(model, loader, device):
 
         pred = model(data)
 
-        # data_size = data.spectrum.shape[0] // 200
-        # data.spectrum = data.spectrum.view(data_size, 200)
-
+        data_size = data.spectrum.shape[0] // 200
+        data.spectrum = data.spectrum.view(data_size, 200)
+        
         loss = nn.MSELoss()(pred, data.spectrum)
 
         total_loss += loss.item() * data.num_graphs

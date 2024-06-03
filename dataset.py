@@ -256,8 +256,8 @@ class XASDataset_atom(InMemoryDataset):
  
     @property
     def raw_file_names(self):
-        return ['data_coronene_new.json']
-        #return ['data_circumcoronene.json']
+        return ['data_coronene.json']
+        # return ['data_circumcoronene.json']
 
     @property
     def processed_file_names(self):

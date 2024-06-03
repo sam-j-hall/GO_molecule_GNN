@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
-from torch_geometric.nn import GCNConv,GINConv,GATv2Conv,MLP
+from torch_geometric.nn import GCNConv,GINConv,GATv2Conv,MLP,SAGEConv
 import torch.nn.functional as F
 
 class GNN(torch.nn.Module):
@@ -55,14 +55,14 @@ class GNN(torch.nn.Module):
 
     def forward(self, batched_data):
 
-        h_node = self.gnn_node(batched_data)
+        node_embedding = self.gnn_node(batched_data)
 
-        h_graph = self.pool(h_node, batched_data.batch)
+        graph_embedding = self.pool(node_embedding, batched_data.batch)
 
         p = torch.nn.LeakyReLU(0.1)
-        out = p(self.graph_pred_linear(h_graph))
+        out = p(self.graph_pred_linear(graph_embedding))
 
-        return out
+        return out#, node_embedding
     
 
     def _initialize_weights(self):
@@ -114,6 +114,8 @@ class GNN_node(torch.nn.Module):
                     self.convs.append(GATv2Conv(int(in_c), out_c, heads=int(heads), edge_dim=6))
                 else:
                     self.convs.append(GATv2Conv(int(in_c*heads), out_c, heads=int(heads), edge_dim=6))
+            elif gnn_type == 'sage':
+                self.convs.append(SAGEConv(in_c, out_c))
             # elif gnn_type='mpnn':
             #     nn = Sequential(Linear(in_c, in_c), ReLU(), Linear(in_c, out_c * out_c))
             #     self.convs.append (NNConv(in_c, in_c, nn))
