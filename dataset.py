@@ -256,12 +256,12 @@ class XASDataset_atom(InMemoryDataset):
  
     @property
     def raw_file_names(self):
-        return ['data_coronene.json']
+        return ['data_coronene_shifted.json']
         # return ['data_circumcoronene.json']
 
     @property
     def processed_file_names(self):
-        return ['data_atom_long_317.pt']
+        return ['data_atom_long_func.pt']
     
     def process(self):
         '''
@@ -281,7 +281,7 @@ class XASDataset_atom(InMemoryDataset):
 
         # --- 
         idx = 0
-        individual_graphs = False
+        individual_graphs = True
 
         for name in all_names:
             # --- 
@@ -331,6 +331,41 @@ class XASDataset_atom(InMemoryDataset):
                     gx = mol_to_nx(mol, spectrum, atom_rep=True)
 
                     pyg_graph = from_networkx(gx)
+                    # --- Define the functional group fragments to search for
+                    oh_frag = Chem.MolFromSmarts('[#6][OX2H]')
+                    cooh_frag = Chem.MolFromSmarts('[CX3](=[OX1])O')
+                    epo_frag = Chem.MolFromSmarts('[#6]-[O]-[#6]')
+                    ald_frag = Chem.MolFromSmarts('[CX3H1](=O)')
+                    ket_frag = Chem.MolFromSmarts('[CX3C](=O)')
+
+                    # --- Search mol for functional group matches
+                    oh_match = mol.GetSubstructMatches(oh_frag)
+                    cooh_match = mol.GetSubstructMatches(cooh_frag)
+                    epo_match = mol.GetSubstructMatches(epo_frag)
+                    ald_match = mol.GetSubstructMatches(ald_frag)
+                    ket_match = mol.GetSubstructMatches(ket_frag)
+
+                    # --- Turn match n-dimensional tuples to 1D list
+                    oh_list = list(sum(oh_match, ()))
+                    cooh_list = list(sum(cooh_match, ()))
+                    epo_list = list(sum(epo_match, ()))
+                    ald_list = list(sum(ald_match, ()))
+                    ket_list = list(sum(ket_match, ()))
+
+                    num = atom.GetIdx()
+                    if num in epo_list:
+                        pyg_graph.y = torch.tensor((1,0,0,0,0,0))
+                    elif num in ald_list:
+                        pyg_graph.y = torch.tensor((0,1,0,0,0,0))
+                    elif num in cooh_list:
+                        pyg_graph.y = torch.tensor((0,0,1,0,0,0))
+                    elif num in oh_list:
+                        pyg_graph.y = torch.tensor((0,0,0,1,0,0))
+                    elif num in ket_list:
+                        pyg_graph.y = torch.tensor((0,0,0,0,1,0))
+                    else:
+                        pyg_graph.y = torch.tensor((0,0,0,0,0,1))
+
                     pyg_graph.spectrum = torch.FloatTensor(spectrum)
                     pyg_graph.pos = torch.from_numpy(positions)
                     pyg_graph.z = torch.from_numpy(z)
@@ -341,7 +376,7 @@ class XASDataset_atom(InMemoryDataset):
                     idx += 1
 
 
-        random.Random(258).shuffle(data_list)
+        #random.Random(258).shuffle(data_list)
 
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]

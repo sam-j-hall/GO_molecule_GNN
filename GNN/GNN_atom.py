@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool
-from torch_geometric.nn import GCNConv, NNConv, PNAConv, TransformerConv
+from torch_geometric.nn import GCNConv, NNConv, PNAConv, TransformerConv, SAGEConv
 
 class GNN(torch.nn.Module):
 
@@ -41,9 +41,11 @@ class GNN(torch.nn.Module):
         self.batch_norms = torch.nn.ModuleList()
 
         for i, in_c, out_c in zip(range(num_layers), in_channels, out_channels):
+            self.batch_norms.append(torch.nn.BatchNorm1d(out_c))
             if self.gnn_type == 'gcn':
                 self.convs.append(GCNConv(in_c, out_c))
-                self.batch_norms.append(torch.nn.BatchNorm1d(out_c))
+            if self.gnn_type == 'sage':
+                self.convs.append(SAGEConv(in_c, out_c))
             else:
                 ValueError('Undefined GNN type called')
 
@@ -86,7 +88,7 @@ class GNN(torch.nn.Module):
 
         graph_embedding = self.pool(node_representation, batched_data.batch)
 
-        w1 = 0.5
+        w1 = 0.0
         h_weight = w1 * graph_embedding
         h_new = h_weight + node_embedding
 

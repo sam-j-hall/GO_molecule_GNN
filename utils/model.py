@@ -16,7 +16,7 @@ def train_model(model, loader, optimizer, device):
 
         optimizer.zero_grad()
 
-        pred = model(data)
+        pred, embedding= model(data)
         
         data_size = data.spectrum.shape[0] // 200
         data.spectrum = data.spectrum.view(data_size, 200)
@@ -29,7 +29,10 @@ def train_model(model, loader, optimizer, device):
 
         optimizer.step()
 
-    return total_loss / len(loader.dataset)#, embedding
+        # out = pred[0].detach().cpu().numpy()
+        # true = data.spectrum[0].detach().cpu().numpy()
+
+    return total_loss / len(loader.dataset), embedding#, true, out
 
 def val_test(model, loader, device):
     '''
@@ -43,7 +46,7 @@ def val_test(model, loader, device):
     for data in loader:
         data = data.to(device)
 
-        pred = model(data)
+        pred, embedding = model(data)
 
         data_size = data.spectrum.shape[0] // 200
         data.spectrum = data.spectrum.view(data_size, 200)
@@ -52,7 +55,10 @@ def val_test(model, loader, device):
 
         total_loss += loss.item() * data.num_graphs
 
-    return total_loss / len(loader.dataset)
+        out = pred[0].detach().cpu().numpy()
+        true = data.spectrum[0].detach().cpu().numpy()
+
+    return total_loss / len(loader.dataset), out, true
 
 def get_spec_prediction(model, index, dataset, device):
     '''
