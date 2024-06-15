@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
-from torch_geometric.nn import GCNConv,GINConv,GATv2Conv,MLP,SAGEConv
+from torch_geometric.nn import GCNConv,GINConv,GINEConv,GATv2Conv,MLP,SAGEConv
 import torch.nn.functional as F
 
 class GNN(torch.nn.Module):
@@ -107,13 +107,16 @@ class GNN_node(torch.nn.Module):
             if gnn_type == 'gin':
                 mlp = MLP([in_c, in_c, out_c])
                 self.convs.append(GINConv(nn=mlp, train_eps=False))
+            if gnn_type == 'gine':
+                mlp = MLP([in_c, in_c, out_c])
+                self.convs.append(GINEConv(nn=mlp, train_eps=False, edge_dim=5))
             elif gnn_type == 'gcn':
                 self.convs.append(GCNConv(in_c, out_c))
             elif gnn_type == 'gat':
                 if i == 1:
-                    self.convs.append(GATv2Conv(int(in_c), out_c, heads=int(heads), edge_dim=6))
+                    self.convs.append(GATv2Conv(int(in_c), out_c, heads=int(heads), edge_dim=5))
                 else:
-                    self.convs.append(GATv2Conv(int(in_c*heads), out_c, heads=int(heads), edge_dim=6))
+                    self.convs.append(GATv2Conv(int(in_c*heads), out_c, heads=int(heads), edge_dim=5))
             elif gnn_type == 'sage':
                 self.convs.append(SAGEConv(in_c, out_c))
             # elif gnn_type='mpnn':
@@ -129,7 +132,7 @@ class GNN_node(torch.nn.Module):
 
         x = batched_data.x.float()
         edge_index = batched_data.edge_index
-        edge_attr = batched_data.edge_attr
+        edge_attr = batched_data.edge_attr.float()
         batch = batched_data.batch
    
         #edge_weight = None
