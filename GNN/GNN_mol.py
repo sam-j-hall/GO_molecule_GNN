@@ -219,7 +219,7 @@ class GraphNet(torch.nn.Module):
                 graphnets.append(GraphNetwork(**v))
 
             self.graphnets = ModuleList(graphnets)
-            self.dropout = Dropout(p=0.3)
+            self.dropout = Dropout(p=0.5)
             self.output_dense = Linear(out_channels, n_targets)
             self.reset_parameters()
 
@@ -246,7 +246,7 @@ class GraphNet(torch.nn.Module):
         for graphnet in self.graphnets:
             graph = graphnet(graph)
 
-        x = global_add_pool(graph.x, graph.batch)
+        x = global_mean_pool(graph.x, graph.batch)
 
         x = self.dropout(x)
         out = self.output_dense(x)
