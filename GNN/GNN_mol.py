@@ -3,6 +3,9 @@ from torch_geometric.nn import MessagePassing
 from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
 from torch_geometric.nn import GCNConv,GINConv,GINEConv,GATv2Conv,MLP,SAGEConv
 import torch.nn.functional as F
+from torch.nn import ModuleList, Dropout, Linear
+
+from GraphNet import *
 
 class GNN(torch.nn.Module):
 
@@ -141,7 +144,7 @@ class GNN_node(torch.nn.Module):
         h_list = [x]
 
         for layer in range(self.num_layer):
-            h = self.convs[layer](h_list[layer], edge_index)#, edge_attr=edge_attr)
+            h = self.convs[layer](h_list[layer], edge_index, edge_attr=edge_attr)
 
             h = self.batch_norms[layer](h)
 
@@ -157,4 +160,95 @@ class GNN_node(torch.nn.Module):
 
         return node_representation
 
-    
+class GraphNet(torch.nn.Module):
+    '''
+    '''
+    def __init__(self,
+                 node_dim: int,
+                 edge_dim: int,
+                 hidden_channels: int,
+                 out_channels: int,
+                 gat_hidd: int,
+                 gat_out: int,
+                 n_layers: int=3,
+                 n_targets: int=200):
+        '''
+        '''
+        super().__init__()
+        assert n_layers > 0
+
+        # --- prepare parameters
+        feat_in_node = node_dim + 2*edge_dim + gat_out
+        feat_in_edge = 2*out_channels + edge_dim + gat_out
+        feat_in_glob = 2*out_channels + gat_out
+        node_model_params0 = {'feat_in': feat_in_node,
+                             'feat_hidd': hidden_channels,
+                             'feat_out': out_channels}
+        edge_model_params0 = {'feat_in': feat_in_edge,
+                             'feat_hidd': hidden_channels,
+                             'feat_out': out_channels}
+        global_model_params0 = {'feat_in': feat_in_glob,
+                               'feat_hidd': hidden_channels,
+                               'feat_out': out_channels}
+
+        all_params = {'graphnet0': {'node_model_params': node_model_params0,
+                                   'edge_model_params': edge_model_params0,
+                                   'global_model_params': global_model_params0,
+                                   'gat_in': node_dim,
+                                   'gat_hidd': gat_hidd,
+                                   'gat_out': gat_out}}
+
+        for i in range(1, n_layers):
+            all_params[f'graphnet{i}'] = {
+                'node_model_params': {'feat_in': 4*out_channels,
+                                      'feat_hidd': hidden_channels,
+                                      'feat_out': out_channels},
+                'edge_model_params': {'feat_in': 4*out_channels,
+                                      'feat_hidd': hidden_channels,
+                                      'feat_out': out_channels},
+                'global_model_params': {'feat_in': 3*out_channels,
+                                        'feat_hidd': hidden_channels,
+                                        'feat_out': out_channels},
+                'gat_in': node_dim,
+                'gat_hidd': gat_hidd,
+                'gat_out': gat_out
+            }   
+
+            graphnets = []
+            for v in all_params.values():
+                graphnets.append(GraphNetwork(**v))
+
+            self.graphnets = ModuleList(graphnets)
+            self.dropout = Dropout(p=0.3)
+            self.output_dense = Linear(out_channels, n_targets)
+            self.reset_parameters()
+
+    def reset_parameters(self):
+        tensor = torch.nn.init.orthogonal_(self.output_dense.weight.data)
+
+        if len(tensor.shape) == 3:
+            fan_in = tensor.shape[-1].numul()
+        else:
+            fan_in = tensor.shape[1]
+
+        with torch.no_grad():
+            if len(tensor.shape) == 3:
+                axis = [0,1]
+            else:
+                axis = 1
+            var, mean = torch.var_mean(tensor, dim=axis, keepdim=True)
+            tensor = (tensor - mean) / (var) ** 0.5
+                
+            tensor *= (1/fan_in)**0.5
+        return tensor
+
+    def forward(self, graph: Any) -> torch.Tensor:
+        for graphnet in self.graphnets:
+            graph = graphnet(graph)
+
+        x = global_add_pool(graph.x, graph.batch)
+
+        x = self.dropout(x)
+        out = self.output_dense(x)
+
+        return out
