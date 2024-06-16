@@ -96,6 +96,8 @@ def bokeh_spectra(ml_spectra, true_spectra):
     p.legend.location = 'bottom_right'
     p.legend.label_text_font_size = '20px'
 
+    p.output_backend = 'svg'
+
     return p
 
 def bokeh_hist(hist, edges, average, spacing):
@@ -148,6 +150,8 @@ def bokeh_hist(hist, edges, average, spacing):
     # --- Add average line
     vline = Span(location=average, dimension='height', line_color='black', line_width=3, line_dash='dashed')
     p.renderers.extend([vline])
+
+    p.output_backend = 'svg'
 
     return(p)
 
